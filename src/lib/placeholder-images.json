@@ -1,3 +1,16 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "empty-portfolio",
+      "description": "Illustration for empty portfolio state",
+      "imageUrl": "https://picsum.photos/seed/empty/600/400",
+      "imageHint": "investment empty"
+    },
+    {
+      "id": "hero-dashboard",
+      "description": "DeltaWealth premium dashboard preview",
+      "imageUrl": "https://picsum.photos/seed/dw/1200/800",
+      "imageHint": "finance dashboard"
+    }
+  ]
 }
