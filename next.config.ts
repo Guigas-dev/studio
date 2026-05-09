@@ -1,8 +1,10 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
   typescript: {
+    // Mantemos como true para o deploy inicial ser mais suave, 
+    // mas em produção real o ideal é corrigir todos os tipos.
     ignoreBuildErrors: true,
   },
   eslint: {
@@ -13,22 +15,22 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
       },
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',
-        port: '',
-        pathname: '/**',
       },
       {
         protocol: 'https',
         hostname: 'picsum.photos',
-        port: '',
-        pathname: '/**',
       },
     ],
+  },
+  // Otimização para Vercel Server Actions (IA flows podem demorar alguns segundos)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
   },
 };
 
