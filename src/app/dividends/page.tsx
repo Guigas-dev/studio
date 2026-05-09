@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { mockDividends } from "@/lib/mock-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,8 +19,22 @@ const monthlyData = [
 ];
 
 export default function DividendsPage() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+
+  const formatDate = (dateStr: string) => {
+    if (!mounted) return "...";
+    // Garantimos que a data seja interpretada corretamente independente do fuso horário
+    // Adicionando o horário de meio-dia para evitar saltos de dia por timezone
+    const date = new Date(dateStr + 'T12:00:00');
+    return date.toLocaleDateString('pt-BR');
+  };
 
   return (
     <DashboardLayout>
@@ -105,7 +120,7 @@ export default function DividendsPage() {
             <TableBody>
               {mockDividends.map((div) => (
                 <TableRow key={div.id} className="border-border/50 hover:bg-secondary/20">
-                  <TableCell>{new Date(div.date).toLocaleDateString('pt-BR')}</TableCell>
+                  <TableCell>{formatDate(div.date)}</TableCell>
                   <TableCell className="font-bold">{div.ticker}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="border-primary/30 text-primary uppercase text-[10px]">
