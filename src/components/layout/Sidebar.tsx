@@ -11,7 +11,6 @@ import {
   TrendingUp, 
   Settings, 
   LogOut,
-  Sparkles,
   ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,6 @@ const menuItems = [
   { name: "Movimentações", icon: ArrowLeftRight, href: "/transactions" },
   { name: "Dividendos", icon: PieChart, href: "/dividends" },
   { name: "Benchmarks", icon: TrendingUp, href: "/benchmarks" },
-  { name: "IA Insights", icon: Sparkles, href: "/insights" },
 ];
 
 export function Sidebar() {
