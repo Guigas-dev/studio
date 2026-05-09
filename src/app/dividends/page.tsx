@@ -1,3 +1,5 @@
+"use client"
+
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { mockDividends } from "@/lib/mock-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
