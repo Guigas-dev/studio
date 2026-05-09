@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FileDown, PlusCircle, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { B3ImportDialog } from "@/components/dashboard/B3ImportDialog";
 
 export default function TransactionsPage() {
   const [mounted, setMounted] = useState(false);
@@ -34,7 +33,6 @@ export default function TransactionsPage() {
           <p className="text-muted-foreground">Histórico completo de compras, vendas e proventos.</p>
         </div>
         <div className="flex gap-3">
-          <B3ImportDialog />
           <Button variant="outline" className="gap-2 border-border/50">
             <FileDown className="w-4 h-4" />
             Exportar

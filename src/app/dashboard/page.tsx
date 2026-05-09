@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, FileText } from "lucide-react";
 import { AssetTable } from "@/components/dashboard/AssetTable";
 import { mockAssets } from "@/lib/mock-data";
+import { B3ImportDialog } from "@/components/dashboard/B3ImportDialog";
 
 export default function DashboardPage() {
   return (
@@ -20,6 +21,7 @@ export default function DashboardPage() {
           <p className="text-muted-foreground">Aqui está uma visão geral do seu desempenho.</p>
         </div>
         <div className="flex gap-3">
+          <B3ImportDialog />
           <Button variant="outline" className="gap-2 border-border/50">
             <FileText className="w-4 h-4" />
             Relatórios
