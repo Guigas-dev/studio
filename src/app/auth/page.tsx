@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -16,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { TrendingUp, Loader2, AlertCircle, ShieldCheck, RefreshCw, Key, ExternalLink } from 'lucide-react';
+import { TrendingUp, Loader2, AlertCircle, ShieldCheck, RefreshCw, Key, ExternalLink, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { isConfigValid, getMissingKeys } from '@/firebase/config';
@@ -25,7 +24,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{message: string, code: string} | null>(null);
   const { user, loading: authLoading } = useUser();
   const auth = useAuth();
   const router = useRouter();
@@ -51,7 +50,7 @@ export default function AuthPage() {
           <span className="text-3xl font-headline font-bold text-gradient">DeltaWealth</span>
         </div>
 
-        <Card className="w-full max-w-md border-primary/20 bg-card/50 backdrop-blur-xl animate-in fade-in zoom-in duration-500">
+        <Card className="w-full max-w-md border-primary/20 bg-card/50 backdrop-blur-xl">
           <CardHeader className="text-center">
             <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
               <Key className="w-8 h-8 text-primary animate-pulse" />
@@ -66,13 +65,13 @@ export default function AuthPage() {
               <ShieldCheck className="h-4 w-4" />
               <AlertTitle>Como resolver?</AlertTitle>
               <AlertDescription className="text-xs space-y-2">
-                <p>Vá ao Console do Firebase, em <b>Configurações do Projeto</b> e copie o objeto de configuração Web.</p>
-                <p>Cole as chaves no arquivo <b>.env</b> ou diretamente em <b>src/firebase/config.ts</b>.</p>
+                <p>Verifique o arquivo <b>.env</b> na raiz do projeto.</p>
+                <p>Certifique-se de que os nomes das chaves estão exatamente como solicitado.</p>
               </AlertDescription>
             </Alert>
             
             <div className="bg-secondary/30 p-4 rounded-lg space-y-3 border border-border/50">
-               <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Chaves não detectadas:</p>
+               <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Chaves ausentes no ambiente:</p>
                <div className="font-mono text-[10px] text-destructive space-y-1">
                   {missingKeys.map(key => (
                     <p key={key}>• {key}</p>
@@ -82,7 +81,7 @@ export default function AuthPage() {
 
             <Button variant="link" className="w-full text-xs gap-1" asChild>
               <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">
-                Ir para o Console do Firebase <ExternalLink className="w-3 h-3" />
+                Abrir Console do Firebase <ExternalLink className="w-3 h-3" />
               </a>
             </Button>
           </CardContent>
@@ -102,11 +101,11 @@ export default function AuthPage() {
 
   const handleEmailAuth = async (type: 'login' | 'signup') => {
     if (!auth) {
-        setError("O Firebase não foi inicializado corretamente. Verifique suas chaves.");
+        setError({ message: "O Firebase não foi inicializado. Verifique suas chaves.", code: "config-error" });
         return;
     }
     if (!email || !password) {
-        setError("Preencha e-mail e senha.");
+        setError({ message: "Preencha e-mail e senha.", code: "missing-fields" });
         return;
     }
     setIsLoading(true);
@@ -122,15 +121,12 @@ export default function AuthPage() {
       const authError = err as AuthError;
       console.error("Firebase Auth Error:", authError.code, authError.message);
       
-      let message = `Erro (${authError.code}): ${authError.message}`;
-      
+      let message = authError.message;
       if (authError.code === 'auth/invalid-credential') message = "E-mail ou senha incorretos.";
       if (authError.code === 'auth/email-already-in-use') message = "Este e-mail já está em uso.";
-      if (authError.code === 'auth/weak-password') message = "A senha deve ter pelo menos 6 caracteres.";
-      if (authError.code === 'auth/invalid-email') message = "E-mail inválido.";
-      if (authError.code === 'auth/operation-not-allowed') message = "O login por e-mail/senha não está ativado no Console do Firebase.";
+      if (authError.code === 'auth/operation-not-allowed') message = "O login por e-mail/senha não está ativado no Firebase.";
 
-      setError(message);
+      setError({ message, code: authError.code });
       toast({
         variant: "destructive",
         title: "Erro na autenticação",
@@ -143,7 +139,7 @@ export default function AuthPage() {
 
   const handleGoogleSignIn = async () => {
     if (!auth) {
-        setError("O Firebase não foi inicializado corretamente.");
+        setError({ message: "O Firebase não foi inicializado.", code: "config-error" });
         return;
     }
     setIsLoading(true);
@@ -157,15 +153,11 @@ export default function AuthPage() {
       console.error("Google Auth Error:", authError.code, authError.message);
       
       if (authError.code !== 'auth/popup-closed-by-user') {
-        let message = `Erro Google (${authError.code}): ${authError.message}`;
-        if (authError.code === 'auth/operation-not-allowed') {
-            message = "O login do Google não está ativado no Console do Firebase.";
-        }
-        setError(message);
+        setError({ message: authError.message, code: authError.code });
         toast({
           variant: "destructive",
           title: "Erro com Google",
-          description: message,
+          description: authError.message,
         });
       }
     } finally {
@@ -186,14 +178,14 @@ export default function AuthPage() {
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px]" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/10 rounded-full blur-[120px]" />
 
-      <div className="mb-8 flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-700">
+      <div className="mb-8 flex items-center gap-3">
         <div className="w-12 h-12 rounded-xl premium-gradient flex items-center justify-center shadow-lg shadow-primary/20">
           <TrendingUp className="text-white w-7 h-7" />
         </div>
         <span className="text-3xl font-headline font-bold text-gradient">DeltaWealth</span>
       </div>
 
-      <Card className="w-full max-w-md border-border/50 bg-card/50 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <Card className="w-full max-w-md border-border/50 bg-card/50 backdrop-blur-xl">
         <Tabs defaultValue="login" className="w-full">
           <CardHeader>
             <TabsList className="grid w-full grid-cols-2 bg-secondary/50 p-1">
@@ -207,8 +199,14 @@ export default function AuthPage() {
               {error && (
                 <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Erro</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertTitle>Erro na Autenticação</AlertTitle>
+                  <AlertDescription className="space-y-2">
+                    <p>{error.message}</p>
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-destructive/20 text-[10px] font-mono opacity-70">
+                      <Info className="w-3 h-3" />
+                      CÓDIGO: {error.code}
+                    </div>
+                  </AlertDescription>
                 </Alert>
               )}
               <div className="space-y-2">
@@ -247,8 +245,14 @@ export default function AuthPage() {
               {error && (
                 <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Erro</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertTitle>Erro ao Criar Conta</AlertTitle>
+                  <AlertDescription className="space-y-2">
+                    <p>{error.message}</p>
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-destructive/20 text-[10px] font-mono opacity-70">
+                      <Info className="w-3 h-3" />
+                      CÓDIGO: {error.code}
+                    </div>
+                  </AlertDescription>
                 </Alert>
               )}
               <div className="space-y-2">
@@ -298,22 +302,10 @@ export default function AuthPage() {
               disabled={isLoading}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26.81-.58z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335"
-                />
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26.81-.58z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
               </svg>
               Google
             </Button>
