@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -15,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { TrendingUp, Loader2, AlertCircle, Settings, ShieldCheck } from 'lucide-react';
+import { TrendingUp, Loader2, AlertCircle, Settings, ShieldCheck, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -48,31 +49,44 @@ export default function AuthPage() {
           <span className="text-3xl font-headline font-bold text-gradient">DeltaWealth</span>
         </div>
 
-        <Card className="w-full max-w-md border-primary/20 bg-card/50 backdrop-blur-xl">
+        <Card className="w-full max-w-md border-primary/20 bg-card/50 backdrop-blur-xl animate-in fade-in zoom-in duration-500">
           <CardHeader className="text-center">
-            <Settings className="w-12 h-12 text-primary mx-auto mb-4 animate-bounce" />
+            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <Settings className="w-8 h-8 text-primary animate-spin-slow" />
+            </div>
             <CardTitle className="font-headline text-2xl">Conexão Pendente</CardTitle>
             <CardDescription>
-              A plataforma está pronta, mas precisa das suas chaves do Firebase para funcionar.
+              As chaves do Firebase não foram detectadas no ambiente.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert className="bg-primary/5 border-primary/20 text-primary">
               <ShieldCheck className="h-4 w-4" />
-              <AlertTitle>Configuração Necessária</AlertTitle>
+              <AlertTitle>Importante</AlertTitle>
               <AlertDescription className="text-xs">
-                Adicione suas credenciais no arquivo <code className="bg-primary/10 px-1 rounded">.env</code> ou diretamente em <code className="bg-primary/10 px-1 rounded">src/firebase/config.ts</code>.
+                Se você já adicionou as chaves no arquivo <code className="bg-primary/10 px-1 rounded">.env</code>, você <strong>precisa reiniciar o servidor</strong> (parar o terminal e rodar npm run dev novamente).
               </AlertDescription>
             </Alert>
-            <div className="bg-secondary/30 p-4 rounded-lg space-y-2 font-mono text-[10px] text-muted-foreground border border-border/50">
-              <p>NEXT_PUBLIC_FIREBASE_API_KEY=AIza...</p>
-              <p>NEXT_PUBLIC_FIREBASE_PROJECT_ID=deltawealth-...</p>
+            <div className="bg-secondary/30 p-4 rounded-lg space-y-2 border border-border/50">
+               <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Variáveis necessárias:</p>
+               <div className="font-mono text-[10px] text-primary/70 space-y-1">
+                  <p>• NEXT_PUBLIC_FIREBASE_API_KEY</p>
+                  <p>• NEXT_PUBLIC_FIREBASE_PROJECT_ID</p>
+                  <p>• ... e as demais (6 total)</p>
+               </div>
             </div>
           </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full border-primary/30 hover:bg-primary/5" onClick={() => window.location.reload()}>
-              Já configurei, atualizar página
+          <CardFooter className="flex flex-col gap-3">
+            <Button 
+              className="w-full premium-gradient border-none h-11 shadow-lg shadow-primary/20" 
+              onClick={() => window.location.reload()}
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Recarregar Página
             </Button>
+            <p className="text-[10px] text-center text-muted-foreground">
+              Certifique-se de que o nome das variáveis no .env começa com NEXT_PUBLIC_
+            </p>
           </CardFooter>
         </Card>
       </div>
@@ -124,9 +138,9 @@ export default function AuthPage() {
       let message = authError.message;
 
       if (authError.code === 'auth/popup-blocked') {
-        message = "O popup foi bloqueado. Por favor, habilite popups ou use o login por e-mail.";
+        message = "O popup foi bloqueado pelo seu navegador. Por favor, habilite popups para este site.";
       } else if (authError.code === 'auth/operation-not-allowed') {
-        message = "O login via Google não está ativado no Console do Firebase.";
+        message = "O login via Google não está ativado no seu Console do Firebase.";
       }
 
       if (authError.code !== 'auth/popup-closed-by-user') {

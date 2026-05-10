@@ -1,23 +1,22 @@
+
 'use client';
 
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import { getAuth, Auth } from 'firebase/auth';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
 /**
  * Inicializa as instâncias do Firebase de forma segura para o cliente.
  */
 export function initializeFirebase() {
-  const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== "";
+  // Verificação básica: se a apiKey existe, tentamos inicializar.
+  // Se não existir, retornamos nulo para que a UI saiba que precisa de configuração.
+  const hasApiKey = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== "";
 
-  if (!isConfigValid) {
-    // Usamos console.warn em vez de error para não disparar o overlay de erro do Next.js
+  if (!hasApiKey) {
     if (typeof window !== 'undefined') {
-      console.warn(
-        "DeltaWealth: Configuração do Firebase não detectada. " +
-        "Lembre-se de configurar as chaves no arquivo .env ou em src/firebase/config.ts para habilitar a autenticação."
-      );
+      console.warn("DeltaWealth: Chave de API do Firebase não encontrada. Verifique seu arquivo .env");
     }
     return { app: null, db: null, auth: null };
   }
@@ -28,7 +27,7 @@ export function initializeFirebase() {
     const auth = getAuth(app);
     return { app, db, auth };
   } catch (error) {
-    console.warn("Erro ao inicializar Firebase:", error);
+    console.error("Erro ao inicializar Firebase:", error);
     return { app: null, db: null, auth: null };
   }
 }
