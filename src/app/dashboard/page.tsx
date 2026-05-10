@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -13,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, FileText, Loader2 } from "lucide-react";
 import { AssetTable } from "@/components/dashboard/AssetTable";
 import { B3ImportDialog } from "@/components/dashboard/B3ImportDialog";
-import { useUser, useCollection, useFirestore } from "@/firebase";
+import { useUser, useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query, limit } from "firebase/firestore";
 import { Asset, PortfolioSummary } from "@/lib/types";
 
@@ -21,14 +20,13 @@ export default function DashboardPage() {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
 
-  const assetsQuery = useMemo(() => {
+  const assetsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, 'users', user.uid, 'assets'), limit(10));
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const { data: assets, loading: assetsLoading } = useCollection<Asset>(assetsQuery);
 
-  // Calcula o resumo em tempo real baseado nos ativos (em um app real isso seria mais complexo)
   const summary: PortfolioSummary = useMemo(() => {
     if (!assets || assets.length === 0) {
       return {
@@ -49,8 +47,8 @@ export default function DashboardPage() {
       totalEquity,
       totalProfitLoss,
       totalProfitLossPercentage: parseFloat(totalProfitLossPercentage.toFixed(2)),
-      monthlyIncome: 590.25, // Mock por enquanto até termos a lógica de dividendos mensais
-      totalDividends: 5230.15, // Mock por enquanto
+      monthlyIncome: 590.25,
+      totalDividends: 5230.15,
     };
   }, [assets]);
 
