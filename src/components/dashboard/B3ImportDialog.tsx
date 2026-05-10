@@ -9,7 +9,7 @@ import { Wand2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { aiTransactionImporter } from "@/ai/flows/ai-transaction-importer-flow";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore } from "@/firebase";
-import { collection, addDoc, doc, setDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -29,43 +29,59 @@ export function B3ImportDialog() {
       const transactions = await aiTransactionImporter({ rawStatement: text });
       
       if (transactions && transactions.length > 0) {
-        // Salva cada transação e atualiza o ativo correspondente
         for (const tx of transactions) {
-          const txRef = collection(db, 'users', user.uid, 'transactions');
-          
-          addDoc(txRef, {
-            ...tx,
-            userId: user.uid,
-            createdAt: serverTimestamp(),
-          }).catch(async (err) => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-              path: `users/${user.uid}/transactions`,
-              operation: 'create',
-              requestResourceData: tx
-            }));
-          });
-
-          // Lógica simplificada: se for compra/venda, tenta atualizar o saldo no 'assets'
-          if (tx.ticker && (tx.type === 'buy' || tx.type === 'sell')) {
-            const assetRef = doc(db, 'users', user.uid, 'assets', tx.ticker);
-            // Aqui poderíamos buscar o asset atual e recalcular, mas para o MVP vamos apenas garantir que o asset existe
-            setDoc(assetRef, {
-              ticker: tx.ticker,
-              type: tx.suggestedCategory || 'Ações',
-              lastUpdate: serverTimestamp(),
-            }, { merge: true }).catch(async (err) => {
-               errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: `users/${user.uid}/assets/${tx.ticker}`,
-                operation: 'update',
-                requestResourceData: { ticker: tx.ticker }
+          if (tx.type === 'dividend') {
+            // Salva na coleção de dividendos
+            const divRef = collection(db, 'users', user.uid, 'dividends');
+            addDoc(divRef, {
+              ticker: tx.ticker || "OUTROS",
+              amount: tx.amount,
+              date: tx.date,
+              type: 'dividend',
+              description: tx.description,
+              createdAt: serverTimestamp(),
+            }).catch(async (err) => {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: `users/${user.uid}/dividends`,
+                operation: 'create',
+                requestResourceData: tx
               }));
             });
+          } else {
+            // Salva na coleção de transações (buy, sell, other)
+            const txRef = collection(db, 'users', user.uid, 'transactions');
+            addDoc(txRef, {
+              ...tx,
+              createdAt: serverTimestamp(),
+            }).catch(async (err) => {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: `users/${user.uid}/transactions`,
+                operation: 'create',
+                requestResourceData: tx
+              }));
+            });
+
+            // Atualiza ou garante existência do ativo na carteira
+            if (tx.ticker && (tx.type === 'buy' || tx.type === 'sell')) {
+              const assetRef = doc(db, 'users', user.uid, 'assets', tx.ticker);
+              setDoc(assetRef, {
+                ticker: tx.ticker,
+                type: tx.suggestedCategory || 'Ações',
+                lastUpdate: serverTimestamp(),
+              }, { merge: true }).catch(async (err) => {
+                 errorEmitter.emit('permission-error', new FirestorePermissionError({
+                  path: `users/${user.uid}/assets/${tx.ticker}`,
+                  operation: 'update',
+                  requestResourceData: { ticker: tx.ticker }
+                }));
+              });
+            }
           }
         }
 
         toast({
           title: "Importação concluída!",
-          description: `Identificamos e salvamos ${transactions.length} novas transações.`,
+          description: `Identificamos e salvamos ${transactions.length} novos registros no seu histórico.`,
         });
         setIsOpen(false);
         setText("");
