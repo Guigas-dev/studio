@@ -26,10 +26,15 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Otimização para Vercel Server Actions (IA flows podem demorar alguns segundos)
+  // Configuração necessária para rodar em ambientes de workstation na nuvem (Firebase Studio)
+  devIndicators: {
+    appIsrStatus: false,
+  },
+  // Permite conexões de desenvolvimento do Cloud Workstations
   experimental: {
     serverActions: {
       bodySizeLimit: '4mb',
+      allowedOrigins: ['*.cloudworkstations.dev', 'localhost:9002']
     },
   },
 };
