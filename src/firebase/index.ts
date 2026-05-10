@@ -1,4 +1,3 @@
-
 'use client';
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
@@ -21,11 +20,13 @@ export function initializeFirebase() {
   return { app, db, auth };
 }
 
+// Exportando os hooks e provedores principais
 export * from './provider';
 export * from './auth/use-user';
 export * from './firestore/use-collection';
 export * from './firestore/use-doc';
 
+// Hooks de utilitário para acesso rápido às instâncias
 export const useFirebase = () => {
   const { app, db, auth } = initializeFirebase();
   return { app, firestore: db, auth };

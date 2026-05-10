@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, ReactNode } from 'react';
@@ -39,3 +38,7 @@ export function useFirebaseContext() {
   }
   return context;
 }
+
+export const useFirebaseApp = () => useFirebaseContext().app;
+export const useFirestore = () => useFirebaseContext().firestore;
+export const useAuth = () => useFirebaseContext().auth;
