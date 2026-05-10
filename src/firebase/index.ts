@@ -5,33 +5,19 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
-let app: FirebaseApp;
-let db: Firestore;
-let auth: Auth;
-
+/**
+ * Inicializa as instâncias do Firebase de forma segura para o cliente.
+ */
 export function initializeFirebase() {
-  if (getApps().length > 0) {
-    app = getApp();
-  } else {
-    app = initializeApp(firebaseConfig);
-  }
-  db = getFirestore(app);
-  auth = getAuth(app);
+  const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
   return { app, db, auth };
 }
 
-// Exportando os hooks e provedores principais
+// Re-exporta tudo do provedor e dos hooks específicos
 export * from './provider';
 export * from './auth/use-user';
 export * from './firestore/use-collection';
 export * from './firestore/use-doc';
-
-// Hooks de utilitário para acesso rápido às instâncias
-export const useFirebase = () => {
-  const { app, db, auth } = initializeFirebase();
-  return { app, firestore: db, auth };
-};
-
-export const useFirebaseApp = () => initializeFirebase().app;
-export const useFirestore = () => initializeFirebase().db;
-export const useAuth = () => initializeFirebase().auth;
+export * from './client-provider';

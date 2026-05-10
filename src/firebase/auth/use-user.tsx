@@ -1,23 +1,27 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { initializeFirebase } from '../index';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { useAuth } from '../provider';
 
+/**
+ * Hook para acessar o usuário autenticado atual.
+ */
 export function useUser() {
+  const auth = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { auth } = initializeFirebase();
+    if (!auth) return;
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [auth]);
 
   return { user, loading };
 }
