@@ -42,11 +42,11 @@ const transactionImporterPrompt = ai.definePrompt({
   name: 'aiTransactionImporterPrompt',
   input: { schema: AITransactionImporterInputSchema },
   output: { schema: AITransactionImporterOutputSchema },
-  prompt: `You are an expert financial data analyst. Your task is to extract investment transactions from the provided data.
+  prompt: `You are an expert financial data analyst specializing in the Brazilian stock market (B3). Your task is to extract investment transactions from the provided raw data.
 
 Data Source:
 {{#if rawStatement}}
-Raw Text/CSV: 
+Raw Data (Text/CSV): 
 """
 {{{rawStatement}}}
 """
@@ -56,15 +56,27 @@ Attached File (PDF/Image): {{media url=fileDataUri}}
 {{/if}}
 
 INSTRUCTIONS:
-1. Identify individual 'buy', 'sell', and 'dividend' (proventos/rendimentos) transactions.
-2. For CSV or tabular data, identify the columns for Date, Ticker, Quantity, Price, and Total Amount.
-3. Handle Brazilian Portuguese terminology: 'Compra', 'Venda', 'Dividendos', 'JCP', 'Rendimento', 'Ativo', 'Ticker'.
-4. Ensure the 'date' is in YYYY-MM-DD format.
-5. 'amount', 'quantity', and 'price' MUST be numbers. Remove currency symbols (R$) and correct thousand/decimal separators.
-6. If the ticker is missing but can be inferred from the description (e.g., "Petrobras PN" -> "PETR4"), include it.
-7. Categorize assets correctly (e.g., PETR4 is 'Ações', HGLG11 is 'FIIs', IVVB11 is 'ETFs').
+1. **Analyze with Flexibility**: Identify rows that represent financial movements. The columns might not have standard names (e.g., 'Ativo', 'Papel', 'Símbolo' are all 'ticker').
+2. **Transaction Types**: 
+   - 'buy' (Compra, C, Aquisição)
+   - 'sell' (Venda, V, Alienação)
+   - 'dividend' (Proventos, Dividendos, JCP, Rendimento, Rendimentos, Juros s/ Capital Próprio)
+3. **Data Cleaning**:
+   - Dates: Convert to YYYY-MM-DD. Handle formats like DD/MM/YYYY or DD/MM/YY.
+   - Numbers: Convert to pure numbers. Brazilian data often uses ',' for decimals (e.g., '10,50' -> 10.5). Remove 'R$', dots used as thousand separators, and whitespace.
+   - Tickers: Clean them (e.g., 'PETR4 - PETROBRAS' -> 'PETR4'). If missing but the name is clear, infer the B3 ticker.
+4. **Output Requirements**: 
+   - Return a VALID JSON array of objects.
+   - If a row is clearly NOT a transaction (header, footer, total sum), ignore it.
+   - For 'dividend' types, quantity and price can be null, but 'amount' is mandatory.
 
-Ignore headers, footers, or non-transactional text. Extract everything as a structured JSON array.`
+5. **Categorization**: 
+   - If the ticker ends in 3, 4, 5, 6 -> 'Ações'
+   - If ends in 11 and is property/logistics -> 'FIIs'
+   - If ends in 11 and is index tracker -> 'ETFs'
+   - If ends in 31, 32, 33, 34, 35 -> 'BDRs'
+
+Be precise and exhaustive. Extract all transactions found.`
 });
 
 const aiTransactionImporterFlow = ai.defineFlow(
@@ -75,6 +87,6 @@ const aiTransactionImporterFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await transactionImporterPrompt(input);
-    return output!;
+    return output || [];
   }
 );
