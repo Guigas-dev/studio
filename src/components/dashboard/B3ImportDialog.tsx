@@ -131,10 +131,16 @@ export function B3ImportDialog() {
       }
     } catch (error: any) {
       console.error("Erro na importação IA:", error);
+      
+      let errorMessage = "Ocorreu um problema ao processar seu extrato com IA.";
+      if (error.message?.includes("Unsupported MIME type")) {
+        errorMessage = "Este formato de arquivo não é suportado diretamente. Por favor, use PDF, Imagens ou cole o texto da planilha.";
+      }
+
       toast({
         variant: "destructive",
         title: "Erro na importação",
-        description: error.message || "Ocorreu um problema ao processar seu extrato com IA.",
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);
@@ -153,14 +159,14 @@ export function B3ImportDialog() {
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline font-bold">Extração por IA</DialogTitle>
           <DialogDescription>
-            Cole o texto do seu extrato ou suba um arquivo (PDF, Excel, CSV). Nossa IA fará o trabalho pesado por você.
+            Cole o texto do seu extrato ou suba um arquivo (PDF ou Imagem). Para planilhas, copie e cole os dados na caixa de texto.
           </DialogDescription>
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
             <Textarea 
-              placeholder="Cole aqui o texto do extrato ou descreva suas operações..."
+              placeholder="Cole aqui o texto do extrato, linhas de uma planilha ou descreva suas operações..."
               className="min-h-[150px] bg-secondary/30 border-border focus:border-primary/50 resize-none p-4"
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -168,13 +174,13 @@ export function B3ImportDialog() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Ou anexe um documento:</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Ou anexe um documento (PDF ou Foto):</p>
             <input 
               type="file" 
               className="hidden" 
               ref={fileInputRef}
               onChange={handleFileChange}
-              accept=".pdf,.xlsx,.xls,.csv,image/*"
+              accept=".pdf,image/*"
             />
             
             {!fileData ? (
@@ -184,7 +190,7 @@ export function B3ImportDialog() {
                 onClick={() => fileInputRef.current?.click()}
               >
                 <FileUp className="w-6 h-6 text-primary" />
-                <span className="text-xs">Clique para selecionar PDF, Excel ou Imagem</span>
+                <span className="text-xs">Clique para selecionar PDF ou Imagem</span>
               </Button>
             ) : (
               <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20 animate-in fade-in slide-in-from-top-1">
@@ -207,7 +213,7 @@ export function B3ImportDialog() {
           <div className="flex items-start gap-2 text-xs text-muted-foreground bg-secondary/20 p-3 rounded-lg">
             <AlertCircle className="w-4 h-4 shrink-0 text-primary" />
             <p>
-              Formatos suportados: PDF do Portal B3, Extratos bancários, Planilhas Excel e até fotos de notas de corretagem.
+              Dica: Se você tem um Excel, selecione as linhas relevantes, copie (Ctrl+C) e cole (Ctrl+V) na caixa de texto acima. A IA identificará os dados perfeitamente.
             </p>
           </div>
         </div>
