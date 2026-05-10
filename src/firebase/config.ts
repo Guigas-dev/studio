@@ -1,11 +1,12 @@
+
 /**
  * Configuração do Firebase utilizando variáveis de ambiente.
- * Adicionada limpeza agressiva para remover aspas e espaços que podem vir do .env.
+ * Limpeza robusta para remover aspas e espaços que podem vir do .env.
  */
 const cleanEnvVar = (value: string | undefined): string => {
   if (!value) return "";
-  // Remove espaços e aspas simples ou duplas no início e fim da string
-  return value.trim().replace(/^["'](.+)["']$/, '$1');
+  // Remove espaços e aspas simples ou duplas em qualquer ponta da string
+  return value.trim().replace(/^["']|["']$/g, '');
 };
 
 export const firebaseConfig = {
@@ -17,8 +18,8 @@ export const firebaseConfig = {
   appId: cleanEnvVar(process.env.NEXT_PUBLIC_FIREBASE_APP_ID),
 };
 
-// Verifica se a chave de API parece minimamente válida (começa com AIza)
-export const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey.startsWith("AIza");
+// Verifica se a chave de API parece minimamente válida (deve ter pelo menos 20 caracteres)
+export const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey.length > 20;
 
 export const getMissingKeys = () => {
   const missing: string[] = [];
