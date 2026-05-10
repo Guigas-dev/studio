@@ -11,12 +11,11 @@ import { firebaseConfig } from './config';
  */
 export function initializeFirebase() {
   // Verificação básica: se a apiKey existe, tentamos inicializar.
-  // Se não existir, retornamos nulo para que a UI saiba que precisa de configuração.
   const hasApiKey = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== "";
 
   if (!hasApiKey) {
     if (typeof window !== 'undefined') {
-      console.warn("DeltaWealth: Chave de API do Firebase não encontrada. Verifique seu arquivo .env");
+      console.warn("DeltaWealth: Configuração do Firebase não detectada no ambiente.");
     }
     return { app: null, db: null, auth: null };
   }
@@ -25,6 +24,11 @@ export function initializeFirebase() {
     const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
+    
+    if (typeof window !== 'undefined') {
+      console.log("DeltaWealth: Firebase inicializado com sucesso.");
+    }
+    
     return { app, db, auth };
   } catch (error) {
     console.error("Erro ao inicializar Firebase:", error);
