@@ -38,7 +38,8 @@ export default function AuthPage() {
 
   const missingKeys = getMissingKeys();
 
-  if (!isConfigValid && !authLoading) {
+  // Exibe tela de erro se as chaves estiverem faltando ou se o formato da API Key for inválido
+  if ((!isConfigValid || missingKeys.length > 0) && !authLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4 relative">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px]" />
@@ -57,7 +58,7 @@ export default function AuthPage() {
             </div>
             <CardTitle className="font-headline text-2xl">Configuração Necessária</CardTitle>
             <CardDescription>
-              Conecte sua conta do Firebase para começar.
+              Suas chaves do Firebase não foram detectadas corretamente.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -65,17 +66,22 @@ export default function AuthPage() {
               <ShieldCheck className="h-4 w-4" />
               <AlertTitle>Como resolver?</AlertTitle>
               <AlertDescription className="text-xs space-y-2">
-                <p>Verifique o arquivo <b>.env</b> na raiz do projeto.</p>
-                <p>Certifique-se de que os nomes das chaves estão exatamente como solicitado.</p>
+                <p>1. Verifique o arquivo <b>.env</b> na raiz do projeto.</p>
+                <p>2. Certifique-se de que as chaves <b>NÃO</b> possuem aspas ou espaços.</p>
+                <p>3. Reinicie o servidor com <b>npm run dev</b> após salvar.</p>
               </AlertDescription>
             </Alert>
             
             <div className="bg-secondary/30 p-4 rounded-lg space-y-3 border border-border/50">
-               <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Chaves ausentes no ambiente:</p>
+               <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Estado do Ambiente:</p>
                <div className="font-mono text-[10px] text-destructive space-y-1">
-                  {missingKeys.map(key => (
-                    <p key={key}>• {key}</p>
-                  ))}
+                  {missingKeys.length > 0 ? (
+                    missingKeys.map(key => (
+                      <p key={key}>• AUSENTE: {key}</p>
+                    ))
+                  ) : !isConfigValid && (
+                    <p>• ERRO: NEXT_PUBLIC_FIREBASE_API_KEY parece inválida (deve começar com AIza...)</p>
+                  )}
                </div>
             </div>
 
@@ -91,7 +97,7 @@ export default function AuthPage() {
               onClick={() => window.location.reload()}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Já configurei, recarregar
+              Recarregar e tentar novamente
             </Button>
           </CardFooter>
         </Card>
@@ -100,14 +106,7 @@ export default function AuthPage() {
   }
 
   const handleEmailAuth = async (type: 'login' | 'signup') => {
-    if (!auth) {
-        setError({ message: "O Firebase não foi inicializado. Verifique suas chaves.", code: "config-error" });
-        return;
-    }
-    if (!email || !password) {
-        setError({ message: "Preencha e-mail e senha.", code: "missing-fields" });
-        return;
-    }
+    if (!auth) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -119,12 +118,10 @@ export default function AuthPage() {
       router.push('/dashboard');
     } catch (err: any) {
       const authError = err as AuthError;
-      console.error("Firebase Auth Error:", authError.code, authError.message);
-      
       let message = authError.message;
       if (authError.code === 'auth/invalid-credential') message = "E-mail ou senha incorretos.";
       if (authError.code === 'auth/email-already-in-use') message = "Este e-mail já está em uso.";
-      if (authError.code === 'auth/operation-not-allowed') message = "O login por e-mail/senha não está ativado no Firebase.";
+      if (authError.code === 'auth/api-key-not-valid') message = "A chave de API do Firebase está incorreta.";
 
       setError({ message, code: authError.code });
       toast({
@@ -138,10 +135,7 @@ export default function AuthPage() {
   };
 
   const handleGoogleSignIn = async () => {
-    if (!auth) {
-        setError({ message: "O Firebase não foi inicializado.", code: "config-error" });
-        return;
-    }
+    if (!auth) return;
     setIsLoading(true);
     setError(null);
     const provider = new GoogleAuthProvider();
@@ -150,8 +144,6 @@ export default function AuthPage() {
       router.push('/dashboard');
     } catch (err: any) {
       const authError = err as AuthError;
-      console.error("Google Auth Error:", authError.code, authError.message);
-      
       if (authError.code !== 'auth/popup-closed-by-user') {
         setError({ message: authError.message, code: authError.code });
         toast({
@@ -199,13 +191,9 @@ export default function AuthPage() {
               {error && (
                 <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Erro na Autenticação</AlertTitle>
-                  <AlertDescription className="space-y-2">
-                    <p>{error.message}</p>
-                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-destructive/20 text-[10px] font-mono opacity-70">
-                      <Info className="w-3 h-3" />
-                      CÓDIGO: {error.code}
-                    </div>
+                  <AlertTitle>Erro técnico: {error.code}</AlertTitle>
+                  <AlertDescription>
+                    {error.message}
                   </AlertDescription>
                 </Alert>
               )}
@@ -245,13 +233,9 @@ export default function AuthPage() {
               {error && (
                 <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Erro ao Criar Conta</AlertTitle>
-                  <AlertDescription className="space-y-2">
-                    <p>{error.message}</p>
-                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-destructive/20 text-[10px] font-mono opacity-70">
-                      <Info className="w-3 h-3" />
-                      CÓDIGO: {error.code}
-                    </div>
+                  <AlertTitle>Erro técnico: {error.code}</AlertTitle>
+                  <AlertDescription>
+                    {error.message}
                   </AlertDescription>
                 </Alert>
               )}

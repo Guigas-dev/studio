@@ -1,32 +1,41 @@
 /**
  * Configuração do Firebase utilizando variáveis de ambiente.
- * Adicionada limpeza de espaços (trim) para evitar erros comuns de cópia e cola no .env.
+ * Adicionada limpeza agressiva para remover aspas e espaços que podem vir do .env.
  */
-export const firebaseConfig = {
-  apiKey: (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim(),
-  authDomain: (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "").trim(),
-  projectId: (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim(),
-  storageBucket: (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "").trim(),
-  messagingSenderId: (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "").trim(),
-  appId: (process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "").trim(),
+const cleanEnvVar = (value: string | undefined): string => {
+  if (!value) return "";
+  // Remove espaços e aspas simples ou duplas no início e fim da string
+  return value.trim().replace(/^["'](.+)["']$/, '$1');
 };
 
-// Verifica se as chaves mínimas estão presentes
-export const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== "";
+export const firebaseConfig = {
+  apiKey: cleanEnvVar(process.env.NEXT_PUBLIC_FIREBASE_API_KEY),
+  authDomain: cleanEnvVar(process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN),
+  projectId: cleanEnvVar(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID),
+  storageBucket: cleanEnvVar(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET),
+  messagingSenderId: cleanEnvVar(process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID),
+  appId: cleanEnvVar(process.env.NEXT_PUBLIC_FIREBASE_APP_ID),
+};
+
+// Verifica se a chave de API parece minimamente válida (começa com AIza)
+export const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey.startsWith("AIza");
 
 export const getMissingKeys = () => {
-  const keys = Object.entries(firebaseConfig)
-    .filter(([_, value]) => !value || value === "")
-    .map(([key]) => {
-      const mapping: Record<string, string> = {
-        apiKey: "NEXT_PUBLIC_FIREBASE_API_KEY",
-        authDomain: "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
-        projectId: "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
-        storageBucket: "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
-        messagingSenderId: "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
-        appId: "NEXT_PUBLIC_FIREBASE_APP_ID"
-      };
-      return mapping[key];
-    });
-  return keys;
+  const missing: string[] = [];
+  const mapping: Record<string, string> = {
+    apiKey: "NEXT_PUBLIC_FIREBASE_API_KEY",
+    authDomain: "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
+    projectId: "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+    storageBucket: "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
+    messagingSenderId: "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+    appId: "NEXT_PUBLIC_FIREBASE_APP_ID"
+  };
+
+  Object.entries(firebaseConfig).forEach(([key, value]) => {
+    if (!value || value === "") {
+      missing.push(mapping[key]);
+    }
+  });
+
+  return missing;
 };
