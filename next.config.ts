@@ -3,8 +3,6 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   typescript: {
-    // Mantemos como true para o deploy inicial ser mais suave, 
-    // mas em produção real o ideal é corrigir todos os tipos.
     ignoreBuildErrors: true,
   },
   eslint: {
@@ -26,8 +24,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Configuração necessária para rodar em ambientes de workstation na nuvem (Firebase Studio)
-  // Permite conexões de desenvolvimento do Cloud Workstations
+  // Configuração necessária para o ambiente de preview no Cloud Workstations
+  // Resolve o aviso "Cross origin request detected"
+  // @ts-ignore - allowedDevOrigins é suportado no Next 15 para domínios de desenvolvimento
+  allowedDevOrigins: ['*.cloudworkstations.dev', 'localhost:9002'],
   experimental: {
     serverActions: {
       bodySizeLimit: '4mb',
