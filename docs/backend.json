@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserProfile": {
@@ -63,19 +62,19 @@
   },
   "firestore": {
     "/users/{userId}": {
-      "schema": "#/entities/UserProfile",
+      "schema": "#/backend/entities/UserProfile",
       "description": "Dados do perfil do usuário."
     },
     "/users/{userId}/assets/{assetId}": {
-      "schema": "#/entities/Asset",
+      "schema": "#/backend/entities/Asset",
       "description": "Ativos da carteira do usuário."
     },
     "/users/{userId}/transactions/{transactionId}": {
-      "schema": "#/entities/Transaction",
+      "schema": "#/backend/entities/Transaction",
       "description": "Histórico de transações do usuário."
     },
     "/users/{userId}/dividends/{dividendId}": {
-      "schema": "#/entities/Dividend",
+      "schema": "#/backend/entities/Dividend",
       "description": "Histórico de dividendos do usuário."
     }
   }
