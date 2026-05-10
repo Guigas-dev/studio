@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -9,12 +10,13 @@ import { DividendsEvolutionChart } from "@/components/dashboard/DividendsEvoluti
 import { BenchmarkChart } from "@/components/dashboard/BenchmarkChart";
 import { EfficiencyChart } from "@/components/dashboard/EfficiencyChart";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, FileText, Loader2 } from "lucide-react";
+import { PlusCircle, FileText, Loader2, Wand2, TrendingUp } from "lucide-react";
 import { AssetTable } from "@/components/dashboard/AssetTable";
 import { B3ImportDialog } from "@/components/dashboard/B3ImportDialog";
 import { useUser, useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query, limit } from "firebase/firestore";
 import { Asset, PortfolioSummary } from "@/lib/types";
+import Image from "next/image";
 
 export default function DashboardPage() {
   const { user, loading: userLoading } = useUser();
@@ -39,7 +41,7 @@ export default function DashboardPage() {
     }
 
     const totalEquity = assets.reduce((acc, asset) => acc + (asset.quantity * asset.currentPrice), 0);
-    const totalCost = assets.reduce((acc, asset) => acc + (asset.quantity * asset.averagePrice), 0);
+    const totalCost = assets.reduce((acc, asset) => acc + (asset.quantity * (asset.averagePrice || 0)), 0);
     const totalProfitLoss = totalEquity - totalCost;
     const totalProfitLossPercentage = totalCost > 0 ? (totalProfitLoss / totalCost) * 100 : 0;
 
@@ -47,8 +49,8 @@ export default function DashboardPage() {
       totalEquity,
       totalProfitLoss,
       totalProfitLossPercentage: parseFloat(totalProfitLossPercentage.toFixed(2)),
-      monthlyIncome: 590.25,
-      totalDividends: 5230.15,
+      monthlyIncome: 0, // No mock data anymore, will be calculated from dividends if implemented
+      totalDividends: 0,
     };
   }, [assets]);
 
@@ -62,12 +64,14 @@ export default function DashboardPage() {
     );
   }
 
+  const hasAssets = assets && assets.length > 0;
+
   return (
     <DashboardLayout>
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-headline font-bold tracking-tight">Dashboard</h2>
-          <p className="text-muted-foreground">Aqui está uma visão geral do seu desempenho.</p>
+          <p className="text-muted-foreground">Bem-vindo, {user?.displayName || 'Investidor'}. Aqui está sua visão geral.</p>
         </div>
         <div className="flex gap-3">
           <B3ImportDialog />
@@ -82,36 +86,53 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <SummaryCards summary={summary} />
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <EquityChart />
-        <AllocationChart />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <BenchmarkChart />
-        <EfficiencyChart />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
-          <DividendsEvolutionChart />
-        </div>
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-headline font-bold">Ativos em Destaque</h3>
-            <Button variant="link" className="text-primary p-0">Ver todos os ativos</Button>
+      {!hasAssets && !assetsLoading ? (
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center border border-dashed border-primary/20 rounded-3xl bg-primary/5 space-y-6 animate-in fade-in zoom-in duration-700">
+          <div className="w-20 h-20 rounded-2xl premium-gradient flex items-center justify-center shadow-2xl shadow-primary/30 rotate-3">
+            <TrendingUp className="text-white w-10 h-10" />
           </div>
-          {assetsLoading ? (
-             <div className="flex justify-center p-8">
-                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-             </div>
-          ) : (
-            <AssetTable assets={assets || []} />
-          )}
+          <div className="max-w-md space-y-2">
+            <h3 className="text-2xl font-headline font-bold">Sua jornada começa aqui</h3>
+            <p className="text-muted-foreground">
+              Sua carteira ainda está vazia. Use a nossa importação inteligente para carregar seus dados da B3 em segundos.
+            </p>
+          </div>
+          <B3ImportDialog />
         </div>
-      </div>
+      ) : (
+        <>
+          <SummaryCards summary={summary} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <EquityChart />
+            <AllocationChart />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <BenchmarkChart />
+            <EfficiencyChart />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1">
+              <DividendsEvolutionChart />
+            </div>
+            <div className="lg:col-span-2 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-headline font-bold">Meus Ativos</h3>
+                <Button variant="link" className="text-primary p-0">Ver todos os ativos</Button>
+              </div>
+              {assetsLoading ? (
+                 <div className="flex justify-center p-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                 </div>
+              ) : (
+                <AssetTable assets={assets || []} />
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </DashboardLayout>
   );
 }
