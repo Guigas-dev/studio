@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react";
@@ -7,24 +8,64 @@ import { Textarea } from "@/components/ui/textarea";
 import { Wand2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { aiTransactionImporter } from "@/ai/flows/ai-transaction-importer-flow";
 import { useToast } from "@/hooks/use-toast";
+import { useUser, useFirestore } from "@/firebase";
+import { collection, addDoc, doc, setDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export function B3ImportDialog() {
   const [text, setText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useUser();
+  const db = useFirestore();
   const { toast } = useToast();
 
   async function handleImport() {
-    if (!text.trim()) return;
+    if (!text.trim() || !user || !db) return;
 
     setIsLoading(true);
     try {
-      const result = await aiTransactionImporter({ rawStatement: text });
+      const transactions = await aiTransactionImporter({ rawStatement: text });
       
-      if (result && result.length > 0) {
+      if (transactions && transactions.length > 0) {
+        // Salva cada transação e atualiza o ativo correspondente
+        for (const tx of transactions) {
+          const txRef = collection(db, 'users', user.uid, 'transactions');
+          
+          addDoc(txRef, {
+            ...tx,
+            userId: user.uid,
+            createdAt: serverTimestamp(),
+          }).catch(async (err) => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: `users/${user.uid}/transactions`,
+              operation: 'create',
+              requestResourceData: tx
+            }));
+          });
+
+          // Lógica simplificada: se for compra/venda, tenta atualizar o saldo no 'assets'
+          if (tx.ticker && (tx.type === 'buy' || tx.type === 'sell')) {
+            const assetRef = doc(db, 'users', user.uid, 'assets', tx.ticker);
+            // Aqui poderíamos buscar o asset atual e recalcular, mas para o MVP vamos apenas garantir que o asset existe
+            setDoc(assetRef, {
+              ticker: tx.ticker,
+              type: tx.suggestedCategory || 'Ações',
+              lastUpdate: serverTimestamp(),
+            }, { merge: true }).catch(async (err) => {
+               errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: `users/${user.uid}/assets/${tx.ticker}`,
+                operation: 'update',
+                requestResourceData: { ticker: tx.ticker }
+              }));
+            });
+          }
+        }
+
         toast({
           title: "Importação concluída!",
-          description: `Identificamos ${result.length} novas transações com sucesso.`,
+          description: `Identificamos e salvamos ${transactions.length} novas transações.`,
         });
         setIsOpen(false);
         setText("");
@@ -32,14 +73,14 @@ export function B3ImportDialog() {
         toast({
           variant: "destructive",
           title: "Nenhuma transação encontrada",
-          description: "Não conseguimos identificar transações no texto fornecido. Verifique se o formato está correto.",
+          description: "Não conseguimos identificar transações no texto fornecido.",
         });
       }
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Erro na importação",
-        description: "Ocorreu um problema ao processar seu extrato. Tente novamente mais tarde.",
+        description: "Ocorreu um problema ao processar seu extrato.",
       });
     } finally {
       setIsLoading(false);
@@ -58,7 +99,7 @@ export function B3ImportDialog() {
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline font-bold">Importação Inteligente</DialogTitle>
           <DialogDescription>
-            Cole abaixo o texto copiado do Portal do Investidor B3 ou do seu extrato bancário. Nossa IA irá identificar os ativos, datas e valores automaticamente.
+            Cole abaixo o texto copiado do Portal do Investidor B3 ou do seu extrato bancário. Nossa IA irá identificar e salvar tudo no banco de dados.
           </DialogDescription>
         </DialogHeader>
         
@@ -72,7 +113,7 @@ export function B3ImportDialog() {
           <div className="flex items-start gap-2 text-xs text-muted-foreground bg-secondary/20 p-3 rounded-lg">
             <AlertCircle className="w-4 h-4 shrink-0 text-primary" />
             <p>
-              Dica: Você pode copiar toda a tabela de movimentações do portal da B3 e colar aqui. O processamento é seguro e local para sua sessão.
+              Dica: Você pode copiar toda a tabela de movimentações do portal da B3 e colar aqui. Os dados serão salvos permanentemente na sua conta.
             </p>
           </div>
         </div>
@@ -83,7 +124,7 @@ export function B3ImportDialog() {
           </Button>
           <Button 
             onClick={handleImport} 
-            disabled={isLoading || !text.trim()}
+            disabled={isLoading || !text.trim() || !user}
             className="premium-gradient border-none min-w-[140px]"
           >
             {isLoading ? (
@@ -94,7 +135,7 @@ export function B3ImportDialog() {
             ) : (
               <>
                 <CheckCircle2 className="w-4 h-4 mr-2" />
-                Processar Texto
+                Processar e Salvar
               </>
             )}
           </Button>

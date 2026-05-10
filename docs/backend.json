@@ -1,0 +1,82 @@
+
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Configurações e perfil do investidor.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "avatarUrl": { "type": "string" },
+        "mainCurrency": { "type": "string", "enum": ["BRL", "USD", "EUR"] },
+        "defaultBenchmark": { "type": "string", "enum": ["CDI", "IBOV", "IPCA", "SP500"] }
+      },
+      "required": ["name", "email"]
+    },
+    "Asset": {
+      "title": "Investment Asset",
+      "description": "Um ativo mantido na carteira do usuário.",
+      "type": "object",
+      "properties": {
+        "ticker": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["Ações", "FIIs", "ETFs", "BDRs", "Renda Fixa", "Criptomoedas", "Stocks Internacionais", "Outros"] },
+        "quantity": { "type": "number" },
+        "averagePrice": { "type": "number" },
+        "currentPrice": { "type": "number" },
+        "segment": { "type": "string" },
+        "sector": { "type": "string" }
+      },
+      "required": ["ticker", "type", "quantity", "averagePrice", "currentPrice"]
+    },
+    "Transaction": {
+      "title": "Financial Transaction",
+      "description": "Registro de compra ou venda de um ativo.",
+      "type": "object",
+      "properties": {
+        "ticker": { "type": "string" },
+        "type": { "type": "string", "enum": ["buy", "sell"] },
+        "date": { "type": "string", "format": "date" },
+        "quantity": { "type": "number" },
+        "price": { "type": "number" },
+        "amount": { "type": "number" },
+        "fees": { "type": "number" }
+      },
+      "required": ["ticker", "type", "date", "quantity", "price", "amount"]
+    },
+    "Dividend": {
+      "title": "Dividend Payment",
+      "description": "Registro de proventos (Dividendos, JCP, Rendimentos) recebidos.",
+      "type": "object",
+      "properties": {
+        "ticker": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "format": "date" },
+        "type": { "type": "string", "enum": ["dividend", "jcp", "rendimento"] }
+      },
+      "required": ["ticker", "amount", "date", "type"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com", "password"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "#/entities/UserProfile",
+      "description": "Dados do perfil do usuário."
+    },
+    "/users/{userId}/assets/{assetId}": {
+      "schema": "#/entities/Asset",
+      "description": "Ativos da carteira do usuário."
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": "#/entities/Transaction",
+      "description": "Histórico de transações do usuário."
+    },
+    "/users/{userId}/dividends/{dividendId}": {
+      "schema": "#/entities/Dividend",
+      "description": "Histórico de dividendos do usuário."
+    }
+  }
+}
