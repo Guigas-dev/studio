@@ -24,9 +24,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Configuração necessária para o ambiente de preview no Cloud Workstations
-  // Resolve o aviso "Cross origin request detected"
-  // @ts-ignore - allowedDevOrigins é suportado no Next 15 para domínios de desenvolvimento
+  // Configuração para permitir HMR e conexões seguras no Cloud Workstations (Next.js 15)
+  // @ts-ignore
   allowedDevOrigins: ['*.cloudworkstations.dev', 'localhost:9002'],
   experimental: {
     serverActions: {
