@@ -15,43 +15,55 @@ import { AssetTable } from "@/components/dashboard/AssetTable";
 import { B3ImportDialog } from "@/components/dashboard/B3ImportDialog";
 import { useUser, useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query, limit } from "firebase/firestore";
-import { Asset, PortfolioSummary } from "@/lib/types";
+import { Asset, PortfolioSummary, Dividend } from "@/lib/types";
 
 export default function DashboardPage() {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
 
+  // Busca Ativos
   const assetsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return query(collection(firestore, 'users', user.uid, 'assets'), limit(10));
+    return query(collection(firestore, 'users', user.uid, 'assets'), limit(50));
+  }, [firestore, user?.uid]);
+
+  // Busca Dividendos para o resumo
+  const dividendsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'users', user.uid, 'dividends'));
   }, [firestore, user?.uid]);
 
   const { data: assets, loading: assetsLoading } = useCollection<Asset>(assetsQuery);
+  const { data: dividends } = useCollection<Dividend>(dividendsQuery);
 
   const summary: PortfolioSummary = useMemo(() => {
-    if (!assets || assets.length === 0) {
-      return {
-        totalEquity: 0,
-        totalProfitLoss: 0,
-        totalProfitLossPercentage: 0,
-        monthlyIncome: 0,
-        totalDividends: 0,
-      };
-    }
-
-    const totalEquity = assets.reduce((acc, asset) => acc + (asset.quantity * (asset.currentPrice || 0)), 0);
-    const totalCost = assets.reduce((acc, asset) => acc + (asset.quantity * (asset.averagePrice || 0)), 0);
-    const totalProfitLoss = totalEquity - totalCost;
-    const totalProfitLossPercentage = totalCost > 0 ? (totalProfitLoss / totalCost) * 100 : 0;
-
-    return {
-      totalEquity,
-      totalProfitLoss,
-      totalProfitLossPercentage: parseFloat(totalProfitLossPercentage.toFixed(2)),
+    const defaultSummary = {
+      totalEquity: 0,
+      totalProfitLoss: 0,
+      totalProfitLossPercentage: 0,
       monthlyIncome: 0,
       totalDividends: 0,
     };
-  }, [assets]);
+
+    if (!assets) return defaultSummary;
+
+    // Cálculo de Patrimônio e Lucro/Prejuízo
+    const totalEquity = assets.reduce((acc, asset) => acc + ((asset.quantity || 0) * (asset.currentPrice || 0)), 0);
+    const totalCost = assets.reduce((acc, asset) => acc + ((asset.quantity || 0) * (asset.averagePrice || 0)), 0);
+    const totalProfitLoss = totalEquity - totalCost;
+    const totalProfitLossPercentage = totalCost > 0 ? (totalProfitLoss / totalCost) * 100 : 0;
+
+    // Cálculo de Dividendos Totais
+    const totalDividends = dividends?.reduce((acc, div) => acc + (div.amount || 0), 0) || 0;
+
+    return {
+      totalEquity: isNaN(totalEquity) ? 0 : totalEquity,
+      totalProfitLoss: isNaN(totalProfitLoss) ? 0 : totalProfitLoss,
+      totalProfitLossPercentage: isNaN(totalProfitLossPercentage) ? 0 : parseFloat(totalProfitLossPercentage.toFixed(2)),
+      monthlyIncome: 0, // Placeholder para cálculo futuro
+      totalDividends: isNaN(totalDividends) ? 0 : totalDividends,
+    };
+  }, [assets, dividends]);
 
   if (userLoading) {
     return (
@@ -98,7 +110,7 @@ export default function DashboardPage() {
           <div className="max-w-md space-y-3 relative z-10">
             <h3 className="text-3xl font-headline font-bold">Pronto para começar?</h3>
             <p className="text-muted-foreground text-lg">
-              Sua carteira está conectada ao Firebase, mas ainda não tem ativos. Use nossa importação de IA para carregar seus dados da B3 instantaneamente.
+              Sua carteira está conectada, mas ainda não tem ativos processados. Use nossa importação de IA para carregar seus dados da B3 instantaneamente.
             </p>
           </div>
           
