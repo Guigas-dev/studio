@@ -6,9 +6,9 @@ import { Firestore } from 'firebase/firestore';
 import { Auth } from 'firebase/auth';
 
 interface FirebaseContextType {
-  app: FirebaseApp;
-  firestore: Firestore;
-  auth: Auth;
+  app: FirebaseApp | null;
+  firestore: Firestore | null;
+  auth: Auth | null;
 }
 
 const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
@@ -20,9 +20,9 @@ export function FirebaseProvider({
   auth,
 }: {
   children: ReactNode;
-  app: FirebaseApp;
-  firestore: Firestore;
-  auth: Auth;
+  app: FirebaseApp | null;
+  firestore: Firestore | null;
+  auth: Auth | null;
 }) {
   return (
     <FirebaseContext.Provider value={{ app, firestore, auth }}>
@@ -42,3 +42,9 @@ export function useFirebaseContext() {
 export const useFirebaseApp = () => useFirebaseContext().app;
 export const useFirestore = () => useFirebaseContext().firestore;
 export const useAuth = () => useFirebaseContext().auth;
+
+// Hook utilitário para verificar se o Firebase está pronto
+export function useFirebaseReady() {
+  const { app, auth, firestore } = useFirebaseContext();
+  return !!app && !!auth && !!firestore;
+}

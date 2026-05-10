@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { TrendingUp, Loader2, AlertCircle } from 'lucide-react';
+import { TrendingUp, Loader2, AlertCircle, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -35,8 +35,39 @@ export default function AuthPage() {
     }
   }, [user, authLoading, router]);
 
+  // Se o Firebase não estiver configurado corretamente
+  if (!auth && !authLoading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md border-destructive/50 bg-destructive/5 backdrop-blur-xl">
+          <CardHeader className="text-center">
+            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+            <CardTitle className="text-destructive font-headline">Configuração Pendente</CardTitle>
+            <CardDescription className="text-destructive/80">
+              O Firebase não foi configurado corretamente nesta aplicação.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground text-center">
+              Para continuar, você precisa adicionar suas chaves de API do Firebase no arquivo <code className="bg-secondary px-1 rounded">.env</code> ou em <code className="bg-secondary px-1 rounded">src/firebase/config.ts</code>.
+            </p>
+            <div className="bg-secondary/30 p-4 rounded-lg space-y-2 font-mono text-[10px] text-muted-foreground overflow-x-auto">
+              <p>NEXT_PUBLIC_FIREBASE_API_KEY=sua_chave</p>
+              <p>NEXT_PUBLIC_FIREBASE_PROJECT_ID=seu_id</p>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button variant="outline" className="w-full" onClick={() => window.location.reload()}>
+              Já configurei, recarregar página
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
   const handleEmailAuth = async (type: 'login' | 'signup') => {
-    if (!email || !password) return;
+    if (!auth || !email || !password) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -54,8 +85,7 @@ export default function AuthPage() {
       if (authError.code === 'auth/email-already-in-use') message = "Este e-mail já está em uso.";
       if (authError.code === 'auth/weak-password') message = "A senha deve ter pelo menos 6 caracteres.";
       if (authError.code === 'auth/invalid-email') message = "E-mail inválido.";
-      if (authError.code === 'auth/user-not-found') message = "Usuário não encontrado.";
-      if (authError.code === 'auth/wrong-password') message = "Senha incorreta.";
+      if (authError.code === 'auth/operation-not-allowed') message = "Este método de login não está ativado no Console do Firebase.";
 
       setError(message);
       toast({
@@ -69,6 +99,7 @@ export default function AuthPage() {
   };
 
   const handleGoogleSignIn = async () => {
+    if (!auth) return;
     setIsLoading(true);
     setError(null);
     const provider = new GoogleAuthProvider();
@@ -80,11 +111,9 @@ export default function AuthPage() {
       let message = authError.message;
 
       if (authError.code === 'auth/popup-blocked') {
-        message = "O popup de login foi bloqueado pelo seu navegador. Por favor, permita popups para este site ou utilize o login por e-mail.";
-      } else if (authError.code === 'auth/popup-closed-by-user') {
-        message = "A janela de login foi fechada antes da conclusão.";
-      } else if (authError.code === 'auth/cancelled-by-user') {
-        message = "Login cancelado.";
+        message = "O popup foi bloqueado pelo seu navegador. Por favor, habilite popups ou use o login por e-mail.";
+      } else if (authError.code === 'auth/operation-not-allowed') {
+        message = "O login via Google não está ativado no Console do Firebase.";
       }
 
       if (authError.code !== 'auth/popup-closed-by-user') {

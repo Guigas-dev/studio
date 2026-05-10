@@ -7,15 +7,20 @@ import { firebaseConfig } from './config';
 
 /**
  * Inicializa as instâncias do Firebase de forma segura para o cliente.
+ * Se a configuração for inválida, retorna null para evitar quebras fatais.
  */
 export function initializeFirebase() {
-  // Verifica se as chaves mínimas existem para evitar erros de inicialização do SDK
-  const isConfigValid = !!firebaseConfig.apiKey && !!firebaseConfig.projectId;
+  const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== "";
 
   if (!isConfigValid) {
-    console.warn(
-      "Configuração do Firebase incompleta. Verifique se as variáveis NEXT_PUBLIC_FIREBASE_* estão definidas no seu arquivo .env ou em src/firebase/config.ts"
-    );
+    if (typeof window !== 'undefined') {
+      console.error(
+        "ERRO: Configuração do Firebase ausente. " +
+        "Certifique-se de preencher as variáveis NEXT_PUBLIC_FIREBASE_* no seu arquivo .env " +
+        "ou diretamente em src/firebase/config.ts."
+      );
+    }
+    return { app: null, db: null, auth: null };
   }
 
   try {
@@ -25,8 +30,7 @@ export function initializeFirebase() {
     return { app, db, auth };
   } catch (error) {
     console.error("Erro crítico ao inicializar Firebase:", error);
-    // Retorna nulos em caso de erro fatal para evitar que o hook useMemo trave a renderização
-    return { app: null as any, db: null as any, auth: null as any };
+    return { app: null, db: null, auth: null };
   }
 }
 
