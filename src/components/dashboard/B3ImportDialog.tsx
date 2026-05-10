@@ -12,7 +12,6 @@ import { useUser, useFirestore } from "@/firebase";
 import { collection, addDoc, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import * as XLSX from 'xlsx';
 
 export function B3ImportDialog() {
   const [text, setText] = useState("");
@@ -25,20 +24,20 @@ export function B3ImportDialog() {
   const db = useFirestore();
   const { toast } = useToast();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Lógica para Planilhas Excel
+    // Lógica para Planilhas Excel usando import dinâmico para evitar problemas de SSR/Turbopack
     if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv')) {
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         try {
+          const XLSX = await import('xlsx');
           const data = event.target?.result;
           const workbook = XLSX.read(data, { type: 'array' });
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
-          // Converte para CSV para que a IA consiga ler como texto estruturado
           const csvContent = XLSX.utils.sheet_to_csv(worksheet);
           
           setText(csvContent);
@@ -52,7 +51,7 @@ export function B3ImportDialog() {
           toast({
             variant: "destructive",
             title: "Erro ao ler planilha",
-            description: "Certifique-se de que o arquivo não está protegido por senha.",
+            description: "Não foi possível processar o arquivo Excel.",
           });
         }
       };
@@ -98,7 +97,7 @@ export function B3ImportDialog() {
     try {
       const transactions = await aiTransactionImporter({ 
         rawStatement: text,
-        fileDataUri: fileData?.uri // Apenas PDFs/Imagens têm URI
+        fileDataUri: fileData?.uri 
       });
       
       if (transactions && transactions.length > 0) {
@@ -107,7 +106,7 @@ export function B3ImportDialog() {
             const divRef = collection(db, 'users', user.uid, 'dividends');
             addDoc(divRef, {
               ticker: tx.ticker || "OUTROS",
-              amount: tx.amount,
+              amount: tx.amount || 0,
               date: tx.date,
               type: 'dividend',
               description: tx.description,
@@ -123,6 +122,7 @@ export function B3ImportDialog() {
             const txRef = collection(db, 'users', user.uid, 'transactions');
             addDoc(txRef, {
               ...tx,
+              amount: tx.amount || 0,
               createdAt: serverTimestamp(),
             }).catch(async () => {
               errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -164,7 +164,6 @@ export function B3ImportDialog() {
         });
       }
     } catch (error: any) {
-      console.error("Erro na importação IA:", error);
       toast({
         variant: "destructive",
         title: "Erro na importação",
@@ -194,7 +193,7 @@ export function B3ImportDialog() {
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
             <Textarea 
-              placeholder="Os dados da planilha aparecerão aqui após o upload..."
+              placeholder="Cole o texto do extrato aqui ou suba um arquivo abaixo..."
               className="min-h-[120px] bg-secondary/30 border-border focus:border-primary/50 resize-none p-4 text-xs font-mono"
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -219,7 +218,7 @@ export function B3ImportDialog() {
               >
                 <FileUp className="w-6 h-6 text-primary mb-1" />
                 <span className="text-sm font-medium">Subir PDF, Foto ou Excel</span>
-                <span className="text-[10px] text-muted-foreground">Máximo 3.5MB para arquivos binários</span>
+                <span className="text-[10px] text-muted-foreground">O conteúdo será extraído automaticamente</span>
               </Button>
             ) : (
               <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20 animate-in fade-in slide-in-from-top-1">
@@ -240,13 +239,6 @@ export function B3ImportDialog() {
               </div>
             )}
           </div>
-
-          <div className="flex items-start gap-2 text-xs text-muted-foreground bg-secondary/20 p-3 rounded-lg border border-border/50">
-            <AlertCircle className="w-4 h-4 shrink-0 text-primary" />
-            <p>
-              **Dica**: Se a planilha for muito grande, a IA pode demorar. O formato CSV gerado internamente ajuda na precisão da extração.
-            </p>
-          </div>
         </div>
 
         <DialogFooter>
@@ -261,12 +253,12 @@ export function B3ImportDialog() {
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Processando...
+                Analisando...
               </>
             ) : (
               <>
                 <CheckCircle2 className="w-4 h-4 mr-2" />
-                Analisar com IA
+                Processar com IA
               </>
             )}
           </Button>

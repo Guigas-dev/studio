@@ -47,20 +47,20 @@ export default function DashboardPage() {
 
     if (!assets) return defaultSummary;
 
-    // Cálculo de Patrimônio e Lucro/Prejuízo
+    // Cálculo de Patrimônio e Lucro/Prejuízo com proteção contra NaN
     const totalEquity = assets.reduce((acc, asset) => acc + ((asset.quantity || 0) * (asset.currentPrice || 0)), 0);
     const totalCost = assets.reduce((acc, asset) => acc + ((asset.quantity || 0) * (asset.averagePrice || 0)), 0);
     const totalProfitLoss = totalEquity - totalCost;
     const totalProfitLossPercentage = totalCost > 0 ? (totalProfitLoss / totalCost) * 100 : 0;
 
-    // Cálculo de Dividendos Totais
+    // Cálculo de Dividendos Totais real
     const totalDividends = dividends?.reduce((acc, div) => acc + (div.amount || 0), 0) || 0;
 
     return {
       totalEquity: isNaN(totalEquity) ? 0 : totalEquity,
       totalProfitLoss: isNaN(totalProfitLoss) ? 0 : totalProfitLoss,
       totalProfitLossPercentage: isNaN(totalProfitLossPercentage) ? 0 : parseFloat(totalProfitLossPercentage.toFixed(2)),
-      monthlyIncome: 0, // Placeholder para cálculo futuro
+      monthlyIncome: 0, 
       totalDividends: isNaN(totalDividends) ? 0 : totalDividends,
     };
   }, [assets, dividends]);
@@ -100,7 +100,7 @@ export default function DashboardPage() {
       </div>
 
       {!hasAssets && !assetsLoading ? (
-        <div className="relative overflow-hidden flex flex-col items-center justify-center py-20 px-4 text-center border border-dashed border-primary/30 rounded-3xl bg-primary/5 space-y-6 animate-in fade-in zoom-in duration-700">
+        <div className="relative overflow-hidden flex flex-col items-center justify-center py-20 px-4 text-center border border-dashed border-primary/30 rounded-3xl bg-primary/5 space-y-6 animate-in fade-in duration-700">
           <div className="absolute top-[-20%] left-[-10%] w-[40%] h-[60%] bg-primary/10 rounded-full blur-[100px]" />
           
           <div className="w-24 h-24 rounded-2xl premium-gradient flex items-center justify-center shadow-2xl shadow-primary/30 rotate-3 relative z-10">
@@ -110,15 +110,12 @@ export default function DashboardPage() {
           <div className="max-w-md space-y-3 relative z-10">
             <h3 className="text-3xl font-headline font-bold">Pronto para começar?</h3>
             <p className="text-muted-foreground text-lg">
-              Sua carteira está conectada, mas ainda não tem ativos processados. Use nossa importação de IA para carregar seus dados da B3 instantaneamente.
+              Use nossa importação de IA para carregar seus dados da B3 instantaneamente a partir de extratos PDF ou planilhas.
             </p>
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 relative z-10">
             <B3ImportDialog />
-            <Button variant="ghost" className="text-muted-foreground hover:text-primary">
-              Como funciona?
-            </Button>
           </div>
         </div>
       ) : (
@@ -142,7 +139,7 @@ export default function DashboardPage() {
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-headline font-bold">Meus Ativos</h3>
-                <Button variant="link" className="text-primary p-0">Ver todos os ativos</Button>
+                <Button variant="link" className="text-primary p-0">Ver todos</Button>
               </div>
               {assetsLoading ? (
                  <div className="flex justify-center p-8">
