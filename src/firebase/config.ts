@@ -1,9 +1,8 @@
 /**
  * Configuração do Firebase utilizando variáveis de ambiente.
- * IMPORTANTE: No Next.js, variáveis usadas no cliente devem começar com NEXT_PUBLIC_.
  * 
- * Se você não quiser usar .env, você pode colar os valores diretamente abaixo 
- * entre as aspas, mas lembre-se de não subir chaves sensíveis para repositórios públicos.
+ * Se o .env não estiver funcionando, você pode colar os valores diretamente
+ * nas strings abaixo para testar.
  */
 export const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
@@ -12,4 +11,12 @@ export const firebaseConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
+};
+
+// Helper para verificar o que está faltando
+export const getMissingKeys = () => {
+  const keys = Object.entries(firebaseConfig)
+    .filter(([_, value]) => !value || value === "")
+    .map(([key]) => `NEXT_PUBLIC_FIREBASE_${key.replace(/[A-Z]/g, letter => `_${letter.toUpperCase()}`).toUpperCase()}`);
+  return keys;
 };
