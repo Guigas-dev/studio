@@ -9,7 +9,7 @@ import { Wand2, Loader2, CheckCircle2, AlertCircle, FileUp, FileSpreadsheet, X, 
 import { aiTransactionImporter } from "@/ai/flows/ai-transaction-importer-flow";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore } from "@/firebase";
-import { collection, addDoc, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -28,7 +28,6 @@ export function B3ImportDialog() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Lógica para Planilhas Excel usando import dinâmico para evitar problemas de SSR/Turbopack
     if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv')) {
       const reader = new FileReader();
       reader.onload = async (event) => {
@@ -59,7 +58,6 @@ export function B3ImportDialog() {
       return;
     }
 
-    // Lógica para PDF e Imagens (Multimodal)
     if (file.size > 3.5 * 1024 * 1024) {
       toast({
         variant: "destructive",
@@ -119,6 +117,7 @@ export function B3ImportDialog() {
               }));
             });
           } else {
+            // Registro da transação
             const txRef = collection(db, 'users', user.uid, 'transactions');
             addDoc(txRef, {
               ...tx,
@@ -132,11 +131,42 @@ export function B3ImportDialog() {
               }));
             });
 
+            // Atualização do Ativo (Saldo e Preço Médio simplificado para MVP)
             if (tx.ticker && (tx.type === 'buy' || tx.type === 'sell')) {
               const assetRef = doc(db, 'users', user.uid, 'assets', tx.ticker);
+              
+              const assetSnap = await getDoc(assetRef);
+              let currentQty = 0;
+              let currentAvgPrice = 0;
+
+              if (assetSnap.exists()) {
+                const data = assetSnap.data();
+                currentQty = data.quantity || 0;
+                currentAvgPrice = data.averagePrice || 0;
+              }
+
+              const txQty = tx.quantity || 0;
+              const txPrice = tx.price || (txQty > 0 ? (tx.amount / txQty) : 0);
+              
+              let newQty = currentQty;
+              let newAvgPrice = currentAvgPrice;
+
+              if (tx.type === 'buy') {
+                newQty = currentQty + txQty;
+                // Cálculo de preço médio: (QtdAtual * PreçoMédio + QtdNova * PreçoNovo) / QtdTotal
+                if (newQty > 0) {
+                  newAvgPrice = ((currentQty * currentAvgPrice) + (txQty * txPrice)) / newQty;
+                }
+              } else {
+                newQty = Math.max(0, currentQty - txQty);
+              }
+
               setDoc(assetRef, {
                 ticker: tx.ticker,
                 type: tx.suggestedCategory || 'Ações',
+                quantity: newQty,
+                averagePrice: newAvgPrice,
+                currentPrice: txPrice, // Atualiza a cotação com o último preço negociado
                 lastUpdate: serverTimestamp(),
               }, { merge: true }).catch(async () => {
                  errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -167,7 +197,7 @@ export function B3ImportDialog() {
       toast({
         variant: "destructive",
         title: "Erro na importação",
-        description: "Não foi possível processar os dados. Tente colar apenas o texto relevante.",
+        description: "Não foi possível processar os dados. Tente copiar e colar apenas o texto relevante.",
       });
     } finally {
       setIsLoading(false);

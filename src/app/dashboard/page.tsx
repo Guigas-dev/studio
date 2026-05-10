@@ -47,20 +47,33 @@ export default function DashboardPage() {
 
     if (!assets) return defaultSummary;
 
-    // Cálculo de Patrimônio e Lucro/Prejuízo com proteção contra NaN
+    // Cálculo de Patrimônio e Lucro/Prejuízo
     const totalEquity = assets.reduce((acc, asset) => acc + ((asset.quantity || 0) * (asset.currentPrice || 0)), 0);
     const totalCost = assets.reduce((acc, asset) => acc + ((asset.quantity || 0) * (asset.averagePrice || 0)), 0);
     const totalProfitLoss = totalEquity - totalCost;
     const totalProfitLossPercentage = totalCost > 0 ? (totalProfitLoss / totalCost) * 100 : 0;
 
-    // Cálculo de Dividendos Totais real
+    // Cálculo de Dividendos Totais
     const totalDividends = dividends?.reduce((acc, div) => acc + (div.amount || 0), 0) || 0;
+
+    // Cálculo de Rendimento Mensal (Dividendos do mês atual)
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    const monthlyIncome = dividends?.reduce((acc, div) => {
+      const divDate = new Date(div.date + 'T12:00:00');
+      if (divDate.getMonth() === currentMonth && divDate.getFullYear() === currentYear) {
+        return acc + (div.amount || 0);
+      }
+      return acc;
+    }, 0) || 0;
 
     return {
       totalEquity: isNaN(totalEquity) ? 0 : totalEquity,
       totalProfitLoss: isNaN(totalProfitLoss) ? 0 : totalProfitLoss,
       totalProfitLossPercentage: isNaN(totalProfitLossPercentage) ? 0 : parseFloat(totalProfitLossPercentage.toFixed(2)),
-      monthlyIncome: 0, 
+      monthlyIncome: isNaN(monthlyIncome) ? 0 : monthlyIncome, 
       totalDividends: isNaN(totalDividends) ? 0 : totalDividends,
     };
   }, [assets, dividends]);
