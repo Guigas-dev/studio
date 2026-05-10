@@ -16,10 +16,10 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { TrendingUp, Loader2, AlertCircle, Settings, ShieldCheck, RefreshCw, Key } from 'lucide-react';
+import { TrendingUp, Loader2, AlertCircle, ShieldCheck, RefreshCw, Key, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { firebaseConfig } from '@/firebase/config';
+import { isConfigValid, getMissingKeys } from '@/firebase/config';
 
 export default function AuthPage() {
   const [email, setEmail] = useState('');
@@ -37,14 +37,9 @@ export default function AuthPage() {
     }
   }, [user, authLoading, router]);
 
-  // Verifica quais chaves estão faltando para ajudar o usuário
-  const missingKeys = Object.entries(firebaseConfig)
-    .filter(([_, value]) => !value || value === "")
-    .map(([key]) => `NEXT_PUBLIC_FIREBASE_${key.replace(/[A-Z]/g, l => `_${l.toUpperCase()}`).toUpperCase()}`);
+  const missingKeys = getMissingKeys();
 
-  const isConfigReady = missingKeys.length === 0;
-
-  if (!isConfigReady && !authLoading) {
+  if (!isConfigValid && !authLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4 relative">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px]" />
@@ -61,28 +56,35 @@ export default function AuthPage() {
             <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
               <Key className="w-8 h-8 text-primary animate-pulse" />
             </div>
-            <CardTitle className="font-headline text-2xl">Configuração Pendente</CardTitle>
+            <CardTitle className="font-headline text-2xl">Configuração Necessária</CardTitle>
             <CardDescription>
-              Ainda faltam algumas chaves de API no seu ambiente.
+              Conecte sua conta do Firebase para começar.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert className="bg-primary/5 border-primary/20 text-primary">
               <ShieldCheck className="h-4 w-4" />
-              <AlertTitle>O que fazer?</AlertTitle>
-              <AlertDescription className="text-xs">
-                Certifique-se de que o arquivo se chama exatamente <code className="bg-primary/10 px-1 rounded">.env</code> (com o ponto na frente) e que você reiniciou o terminal.
+              <AlertTitle>Como resolver?</AlertTitle>
+              <AlertDescription className="text-xs space-y-2">
+                <p>Vá ao Console do Firebase, em <b>Configurações do Projeto</b> e copie o objeto de configuração Web.</p>
+                <p>Cole as chaves no arquivo <b>.env</b> ou diretamente em <b>src/firebase/config.ts</b>.</p>
               </AlertDescription>
             </Alert>
             
             <div className="bg-secondary/30 p-4 rounded-lg space-y-3 border border-border/50">
-               <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Variáveis não detectadas:</p>
+               <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Chaves não detectadas:</p>
                <div className="font-mono text-[10px] text-destructive space-y-1">
                   {missingKeys.map(key => (
                     <p key={key}>• {key}</p>
                   ))}
                </div>
             </div>
+
+            <Button variant="link" className="w-full text-xs gap-1" asChild>
+              <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">
+                Ir para o Console do Firebase <ExternalLink className="w-3 h-3" />
+              </a>
+            </Button>
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
             <Button 
@@ -90,11 +92,8 @@ export default function AuthPage() {
               onClick={() => window.location.reload()}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Tentar Novamente
+              Já configurei, recarregar
             </Button>
-            <p className="text-[10px] text-center text-muted-foreground">
-              Dica: Se o .env não funcionar, você pode colar as chaves diretamente em src/firebase/config.ts
-            </p>
           </CardFooter>
         </Card>
       </div>
@@ -143,11 +142,11 @@ export default function AuthPage() {
     } catch (err: any) {
       const authError = err as AuthError;
       if (authError.code !== 'auth/popup-closed-by-user') {
-        setError(authError.message);
+        setError("Erro ao abrir login do Google. Verifique se as popups estão bloqueadas.");
         toast({
           variant: "destructive",
           title: "Erro com Google",
-          description: "Habilite popups ou tente o login por e-mail.",
+          description: "Tente usar e-mail e senha ou habilite popups.",
         });
       }
     } finally {
@@ -293,7 +292,7 @@ export default function AuthPage() {
                   fill="#FBBC05"
                 />
                 <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                   fill="#EA4335"
                 />
               </svg>
