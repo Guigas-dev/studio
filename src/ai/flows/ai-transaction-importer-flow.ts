@@ -21,13 +21,14 @@ const TransactionTypeSchema = z.enum(['buy', 'sell', 'dividend', 'other']).descr
 const AITransactionSchema = z.object({
   type: TransactionTypeSchema,
   date: z.string().describe('The date of the transaction in YYYY-MM-DD format.'),
-  ticker: z.string().optional().nullable().describe('The ticker symbol of the asset involved in the transaction (e.g., "PETR4", "IVVB11"). Use null if not inferable.'),
-  description: z.string().describe('A brief description of the transaction.'),
-  quantity: z.number().optional().nullable().describe('The quantity of the asset involved for buy/sell transactions.'),
-  price: z.number().optional().nullable().describe('The price per unit of the asset for buy/sell transactions.'),
-  amount: z.number().describe('The total financial amount of the transaction.'),
-  suggestedCategory: z.string().optional().nullable().describe('A suggested category for the asset (Ações, FIIs, ETFs, BDRs, Renda Fixa, Cripto, etc.).'),
-  originalLine: z.string().describe('The exact line or reference from the raw data.'),
+  ticker: z.string().optional().nullable().describe('The ticker symbol of the asset (e.g., "PETR4", "IVVB11"). Use null if not inferable.'),
+  description: z.string().describe('A brief description of the transaction as seen in the document.'),
+  quantity: z.number().optional().nullable().describe('The unit quantity involved.'),
+  price: z.number().optional().nullable().describe('The unit price of the asset.'),
+  amount: z.number().describe('The total financial amount (Net amount) of the transaction, including fees if applicable.'),
+  fees: z.number().optional().default(0).describe('Trading fees or taxes identified.'),
+  suggestedCategory: z.string().optional().nullable().describe('Suggested category (Ações, FIIs, ETFs, BDRs, Renda Fixa, Cripto).'),
+  originalLine: z.string().describe('The exact text reference from the source data.'),
 });
 
 const AITransactionImporterOutputSchema = z.array(AITransactionSchema).describe('An array of identified and categorized financial transactions.');
@@ -41,35 +42,26 @@ const transactionImporterPrompt = ai.definePrompt({
   name: 'aiTransactionImporterPrompt',
   input: { schema: AITransactionImporterInputSchema },
   output: { schema: AITransactionImporterOutputSchema },
-  prompt: `Você é um analista de dados financeiros experiente no mercado brasileiro (B3). Sua missão é encontrar transações de investimento nos dados fornecidos.
+  prompt: `Você é um especialista em Notas de Corretagem e Extratos da B3. Sua tarefa é extrair com precisão cirúrgica as transações financeiras.
 
-FONTE DE DADOS:
+DADOS FONTE:
 {{#if rawStatement}}
-Dados brutos (Texto/CSV): 
-"""
-{{{rawStatement}}}
-"""
+Texto/CSV: """{{{rawStatement}}}"""
 {{/if}}
 {{#if fileDataUri}}
-Arquivo Anexo (PDF/Imagem): {{media url=fileDataUri}}
+Documento (PDF/Imagem): {{media url=fileDataUri}}
 {{/if}}
 
-INSTRUÇÕES DE EXTRAÇÃO:
-1. **Analise cada linha**: Identifique movimentações de COMPRA, VENDA ou PROVENTOS (Dividendos, JCP, Rendimentos).
-2. **Mapeamento de Tickers**: 
-   - Identifique tickers como PETR4, VALE3, HGLG11, IVVB11, BTC, ETH.
-   - Se o ticker não estiver explícito, mas o nome da empresa for claro (ex: "ITAU UNIBANCO"), infira o ticker (ITUB4).
-3. **Limpeza e Conversão**:
-   - Datas: Converta formatos como 15/05/2024 ou 15/05/24 para 2024-05-15 (YYYY-MM-DD).
-   - Números: Remova "R$", pontos de milhar e use ponto para decimais (ex: "1.250,50" vira 1250.50).
-4. **Tratamento de Proventos**:
-   - Se o tipo for 'dividend', a quantidade e preço podem ser nulos, mas o 'amount' é o valor recebido.
+REGRAS DE OURO PARA VALORES:
+1. **Valor Líquido (Amount)**: Extraia o valor total que saiu ou entrou na conta. Se houver taxas separadas, o 'amount' para COMPRA deve ser (Quantidade * Preço + Taxas). Para VENDA deve ser (Quantidade * Preço - Taxas).
+2. **Precisão Numérica**: Ignore símbolos como "R$", "." (como separador de milhar). O resultado final deve ser um número decimal puro (ex: 1250.50).
+3. **Identificação de Tickers**: Se o documento disser "ITAUUNIBANCO PN", você deve retornar ITUB4. Use seu conhecimento de mercado para mapear nomes de empresas para tickers da B3.
+4. **Datas**: Sempre converta para YYYY-MM-DD.
 
-EXEMPLO DE IDENTIFICAÇÃO:
-- "10/05/2024;Compra;PETR4;100;35,00;3500,00" -> { type: 'buy', ticker: 'PETR4', quantity: 100, price: 35.0, amount: 3500.0 }
-- "12/05/2024;Rendimento;HGLG11;0,78;78,00" -> { type: 'dividend', ticker: 'HGLG11', amount: 78.0 }
+EXEMPLO DE NOTA DE CORRETAGEM:
+- "Compra; PETR4; 100; 35,00; Taxa: 2,50; Total: 3502,50" -> { type: 'buy', ticker: 'PETR4', quantity: 100, price: 35.0, amount: 3502.50, fees: 2.50 }
 
-Seja exaustivo. Extraia TODAS as transações que encontrar. Se a linha for apenas um cabeçalho ou saldo, ignore-a.`
+Seja exaustivo e não ignore nenhuma linha que represente movimentação de ativos ou proventos.`
 });
 
 const aiTransactionImporterFlow = ai.defineFlow(
