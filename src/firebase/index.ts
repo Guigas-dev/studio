@@ -7,17 +7,16 @@ import { firebaseConfig } from './config';
 
 /**
  * Inicializa as instâncias do Firebase de forma segura para o cliente.
- * Se a configuração for inválida, retorna null para evitar quebras fatais.
  */
 export function initializeFirebase() {
   const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== "";
 
   if (!isConfigValid) {
+    // Usamos console.warn em vez de error para não disparar o overlay de erro do Next.js
     if (typeof window !== 'undefined') {
-      console.error(
-        "ERRO: Configuração do Firebase ausente. " +
-        "Certifique-se de preencher as variáveis NEXT_PUBLIC_FIREBASE_* no seu arquivo .env " +
-        "ou diretamente em src/firebase/config.ts."
+      console.warn(
+        "DeltaWealth: Configuração do Firebase não detectada. " +
+        "Lembre-se de configurar as chaves no arquivo .env ou em src/firebase/config.ts para habilitar a autenticação."
       );
     }
     return { app: null, db: null, auth: null };
@@ -29,7 +28,7 @@ export function initializeFirebase() {
     const auth = getAuth(app);
     return { app, db, auth };
   } catch (error) {
-    console.error("Erro crítico ao inicializar Firebase:", error);
+    console.warn("Erro ao inicializar Firebase:", error);
     return { app: null, db: null, auth: null };
   }
 }

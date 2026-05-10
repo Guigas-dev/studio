@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { TrendingUp, Loader2, AlertCircle, Settings } from 'lucide-react';
+import { TrendingUp, Loader2, AlertCircle, Settings, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -35,30 +35,43 @@ export default function AuthPage() {
     }
   }, [user, authLoading, router]);
 
-  // Se o Firebase não estiver configurado corretamente
+  // Interface de ajuda caso o Firebase não esteja configurado
   if (!auth && !authLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md border-destructive/50 bg-destructive/5 backdrop-blur-xl">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4 relative">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px]" />
+        
+        <div className="mb-8 flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl premium-gradient flex items-center justify-center shadow-lg shadow-primary/20">
+            <TrendingUp className="text-white w-7 h-7" />
+          </div>
+          <span className="text-3xl font-headline font-bold text-gradient">DeltaWealth</span>
+        </div>
+
+        <Card className="w-full max-w-md border-primary/20 bg-card/50 backdrop-blur-xl">
           <CardHeader className="text-center">
-            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-            <CardTitle className="text-destructive font-headline">Configuração Pendente</CardTitle>
-            <CardDescription className="text-destructive/80">
-              O Firebase não foi configurado corretamente nesta aplicação.
+            <Settings className="w-12 h-12 text-primary mx-auto mb-4 animate-spin-slow" />
+            <CardTitle className="font-headline text-2xl">Configuração Necessária</CardTitle>
+            <CardDescription>
+              Para ativar o sistema de investimentos, conecte seu projeto Firebase.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground text-center">
-              Para continuar, você precisa adicionar suas chaves de API do Firebase no arquivo <code className="bg-secondary px-1 rounded">.env</code> ou em <code className="bg-secondary px-1 rounded">src/firebase/config.ts</code>.
-            </p>
-            <div className="bg-secondary/30 p-4 rounded-lg space-y-2 font-mono text-[10px] text-muted-foreground overflow-x-auto">
-              <p>NEXT_PUBLIC_FIREBASE_API_KEY=sua_chave</p>
-              <p>NEXT_PUBLIC_FIREBASE_PROJECT_ID=seu_id</p>
+            <Alert className="bg-primary/5 border-primary/20 text-primary">
+              <ShieldCheck className="h-4 w-4" />
+              <AlertTitle>Próximo Passo</AlertTitle>
+              <AlertDescription className="text-xs">
+                Insira suas credenciais no arquivo <code className="bg-primary/10 px-1 rounded">.env</code> ou em <code className="bg-primary/10 px-1 rounded">src/firebase/config.ts</code>.
+              </AlertDescription>
+            </Alert>
+            <div className="bg-secondary/30 p-4 rounded-lg space-y-2 font-mono text-[10px] text-muted-foreground">
+              <p>NEXT_PUBLIC_FIREBASE_API_KEY=AIza...</p>
+              <p>NEXT_PUBLIC_FIREBASE_PROJECT_ID=deltawealth-...</p>
             </div>
           </CardContent>
           <CardFooter>
-            <Button variant="outline" className="w-full" onClick={() => window.location.reload()}>
-              Já configurei, recarregar página
+            <Button variant="outline" className="w-full border-primary/30 hover:bg-primary/5" onClick={() => window.location.reload()}>
+              Já configurei, atualizar agora
             </Button>
           </CardFooter>
         </Card>
@@ -85,7 +98,7 @@ export default function AuthPage() {
       if (authError.code === 'auth/email-already-in-use') message = "Este e-mail já está em uso.";
       if (authError.code === 'auth/weak-password') message = "A senha deve ter pelo menos 6 caracteres.";
       if (authError.code === 'auth/invalid-email') message = "E-mail inválido.";
-      if (authError.code === 'auth/operation-not-allowed') message = "Este método de login não está ativado no Console do Firebase.";
+      if (authError.code === 'auth/operation-not-allowed') message = "O método de login por e-mail não está ativado no Console do Firebase.";
 
       setError(message);
       toast({
@@ -278,7 +291,7 @@ export default function AuthPage() {
       </Card>
       
       <p className="mt-8 text-xs text-muted-foreground">
-        Ao continuar, você concorda com nossos Termos de Serviço e Política de Privacidade.
+        DeltaWealth Premium Portfolio Management
       </p>
     </div>
   );
