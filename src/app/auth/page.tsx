@@ -101,7 +101,14 @@ export default function AuthPage() {
   }
 
   const handleEmailAuth = async (type: 'login' | 'signup') => {
-    if (!auth || !email || !password) return;
+    if (!auth) {
+        setError("O Firebase não foi inicializado corretamente. Verifique suas chaves.");
+        return;
+    }
+    if (!email || !password) {
+        setError("Preencha e-mail e senha.");
+        return;
+    }
     setIsLoading(true);
     setError(null);
     try {
@@ -113,12 +120,15 @@ export default function AuthPage() {
       router.push('/dashboard');
     } catch (err: any) {
       const authError = err as AuthError;
-      let message = "Ocorreu um erro inesperado.";
+      console.error("Firebase Auth Error:", authError.code, authError.message);
+      
+      let message = `Erro (${authError.code}): ${authError.message}`;
       
       if (authError.code === 'auth/invalid-credential') message = "E-mail ou senha incorretos.";
       if (authError.code === 'auth/email-already-in-use') message = "Este e-mail já está em uso.";
       if (authError.code === 'auth/weak-password') message = "A senha deve ter pelo menos 6 caracteres.";
       if (authError.code === 'auth/invalid-email') message = "E-mail inválido.";
+      if (authError.code === 'auth/operation-not-allowed') message = "O login por e-mail/senha não está ativado no Console do Firebase.";
 
       setError(message);
       toast({
@@ -132,7 +142,10 @@ export default function AuthPage() {
   };
 
   const handleGoogleSignIn = async () => {
-    if (!auth) return;
+    if (!auth) {
+        setError("O Firebase não foi inicializado corretamente.");
+        return;
+    }
     setIsLoading(true);
     setError(null);
     const provider = new GoogleAuthProvider();
@@ -141,12 +154,18 @@ export default function AuthPage() {
       router.push('/dashboard');
     } catch (err: any) {
       const authError = err as AuthError;
+      console.error("Google Auth Error:", authError.code, authError.message);
+      
       if (authError.code !== 'auth/popup-closed-by-user') {
-        setError("Erro ao abrir login do Google. Verifique se as popups estão bloqueadas.");
+        let message = `Erro Google (${authError.code}): ${authError.message}`;
+        if (authError.code === 'auth/operation-not-allowed') {
+            message = "O login do Google não está ativado no Console do Firebase.";
+        }
+        setError(message);
         toast({
           variant: "destructive",
           title: "Erro com Google",
-          description: "Tente usar e-mail e senha ou habilite popups.",
+          description: message,
         });
       }
     } finally {
