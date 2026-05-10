@@ -27,9 +27,6 @@ const nextConfig: NextConfig = {
     ],
   },
   // Configuração necessária para rodar em ambientes de workstation na nuvem (Firebase Studio)
-  devIndicators: {
-    appIsrStatus: false,
-  },
   // Permite conexões de desenvolvimento do Cloud Workstations
   experimental: {
     serverActions: {
