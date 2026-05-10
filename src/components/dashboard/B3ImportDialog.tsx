@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useRef } from "react";
@@ -26,6 +27,16 @@ export function B3ImportDialog() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Limite manual de 3.5MB para evitar chegar no limite de 4MB do servidor (devido ao overhead do base64)
+    if (file.size > 3.5 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "Arquivo muito grande",
+        description: "O tamanho máximo permitido é 3.5MB.",
+      });
+      return;
+    }
 
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -118,11 +129,12 @@ export function B3ImportDialog() {
           description: "Não conseguimos identificar transações no conteúdo fornecido.",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Erro na importação IA:", error);
       toast({
         variant: "destructive",
         title: "Erro na importação",
-        description: "Ocorreu um problema ao processar seu extrato com IA.",
+        description: error.message || "Ocorreu um problema ao processar seu extrato com IA.",
       });
     } finally {
       setIsLoading(false);
@@ -133,7 +145,7 @@ export function B3ImportDialog() {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" className="gap-2 border-primary/30 hover:bg-primary/5 text-primary">
-          <Wand2 className="w-4 h-4" />
+          < Wand2 className="w-4 h-4" />
           Importação Inteligente
         </Button>
       </DialogTrigger>

@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
   // Otimização para Vercel Server Actions (IA flows podem demorar alguns segundos)
   experimental: {
     serverActions: {
-      bodySizeLimit: '2mb',
+      bodySizeLimit: '4mb',
     },
   },
 };
