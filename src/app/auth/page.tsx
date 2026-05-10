@@ -13,7 +13,7 @@ import { useAuth, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/tabs';
 import { Label } from '@/components/ui/label';
 import { TrendingUp, Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -54,7 +54,8 @@ export default function AuthPage() {
       if (authError.code === 'auth/email-already-in-use') message = "Este e-mail já está em uso.";
       if (authError.code === 'auth/weak-password') message = "A senha deve ter pelo menos 6 caracteres.";
       if (authError.code === 'auth/invalid-email') message = "E-mail inválido.";
-      if (authError.code === 'auth/configuration-not-found') message = "O método de login não foi ativado no Console do Firebase.";
+      if (authError.code === 'auth/user-not-found') message = "Usuário não encontrado.";
+      if (authError.code === 'auth/wrong-password') message = "Senha incorreta.";
 
       setError(message);
       toast({
@@ -76,12 +77,22 @@ export default function AuthPage() {
       router.push('/dashboard');
     } catch (err: any) {
       const authError = err as AuthError;
+      let message = authError.message;
+
+      if (authError.code === 'auth/popup-blocked') {
+        message = "O popup de login foi bloqueado pelo seu navegador. Por favor, permita popups para este site ou utilize o login por e-mail.";
+      } else if (authError.code === 'auth/popup-closed-by-user') {
+        message = "A janela de login foi fechada antes da conclusão.";
+      } else if (authError.code === 'auth/cancelled-by-user') {
+        message = "Login cancelado.";
+      }
+
       if (authError.code !== 'auth/popup-closed-by-user') {
-        setError(authError.message);
+        setError(message);
         toast({
           variant: "destructive",
           title: "Erro com Google",
-          description: authError.message,
+          description: message,
         });
       }
     } finally {
@@ -99,7 +110,6 @@ export default function AuthPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4 relative overflow-hidden">
-      {/* Background Decor */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px]" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/10 rounded-full blur-[120px]" />
 
