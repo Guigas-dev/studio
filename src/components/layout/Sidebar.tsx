@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { 
   LayoutDashboard, 
@@ -14,6 +14,8 @@ import {
   ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/firebase";
+import { signOut } from "firebase/auth";
 
 const menuItems = [
   { name: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
@@ -25,6 +27,13 @@ const menuItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const auth = useAuth();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await signOut(auth);
+    router.push('/auth');
+  };
 
   return (
     <aside className="w-64 border-r border-border h-screen sticky top-0 bg-sidebar flex flex-col">
@@ -66,7 +75,11 @@ export function Sidebar() {
             <span>Configurações</span>
           </Button>
         </Link>
-        <Button variant="ghost" className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10 h-11">
+        <Button 
+          variant="ghost" 
+          onClick={handleSignOut}
+          className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10 h-11"
+        >
           <LogOut className="w-5 h-5" />
           <span>Sair</span>
         </Button>

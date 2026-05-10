@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -12,8 +13,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Bell, Search, User, CreditCard, LogOut } from "lucide-react";
+import { useUser, useAuth } from "@/firebase";
+import { signOut } from "firebase/auth";
 
 export function UserNav() {
+  const { user } = useUser();
+  const auth = useAuth();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await signOut(auth);
+    router.push('/auth');
+  };
+
   return (
     <div className="flex items-center gap-4">
       <div className="flex items-center bg-secondary/50 rounded-full px-4 py-2 border border-border mr-4 group hover:border-primary/30 transition-all">
@@ -34,16 +46,16 @@ export function UserNav() {
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-10 w-10 rounded-full border border-border p-0 overflow-hidden hover:border-primary/30 transition-all">
             <Avatar className="h-full w-full">
-              <AvatarImage src="https://picsum.photos/seed/user/100/100" alt="Avatar" />
-              <AvatarFallback>UN</AvatarFallback>
+              <AvatarImage src={user?.photoURL || `https://picsum.photos/seed/${user?.uid}/100/100`} alt="Avatar" />
+              <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56 mt-2 border-border bg-card" align="end" forceMount>
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">Investidor Premium</p>
-              <p className="text-xs leading-none text-muted-foreground">investidor@deltawealth.com</p>
+              <p className="text-sm font-medium leading-none">{user?.displayName || 'Investidor'}</p>
+              <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -58,7 +70,10 @@ export function UserNav() {
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="gap-2 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10">
+          <DropdownMenuItem 
+            onClick={handleSignOut}
+            className="gap-2 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+          >
             <LogOut className="w-4 h-4" />
             <span>Sair</span>
           </DropdownMenuItem>
