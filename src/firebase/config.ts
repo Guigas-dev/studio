@@ -6,7 +6,7 @@
 const cleanEnvVar = (value: string | undefined): string => {
   if (!value) return "";
   // Remove espaços e aspas simples ou duplas em qualquer ponta da string
-  return value.trim().replace(/^["']|["']$/g, '');
+  return value.trim().replace(/^["']|["']$/g, '').trim();
 };
 
 export const firebaseConfig = {
@@ -18,8 +18,8 @@ export const firebaseConfig = {
   appId: cleanEnvVar(process.env.NEXT_PUBLIC_FIREBASE_APP_ID),
 };
 
-// Verifica se a chave de API parece minimamente válida (deve ter pelo menos 20 caracteres)
-export const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey.length > 20;
+// Verifica se a chave de API parece minimamente válida (deve começar com AIza e ter tamanho razoável)
+export const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey.startsWith('AIza') && firebaseConfig.apiKey.length > 20;
 
 export const getMissingKeys = () => {
   const missing: string[] = [];
