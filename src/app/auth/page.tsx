@@ -6,7 +6,8 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signInWithPopup, 
-  GoogleAuthProvider 
+  GoogleAuthProvider,
+  AuthError
 } from 'firebase/auth';
 import { useAuth, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -14,13 +15,15 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { TrendingUp, Loader2 } from 'lucide-react';
+import { TrendingUp, Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { user, loading: authLoading } = useUser();
   const auth = useAuth();
   const router = useRouter();
@@ -35,6 +38,7 @@ export default function AuthPage() {
   const handleEmailAuth = async (type: 'login' | 'signup') => {
     if (!email || !password) return;
     setIsLoading(true);
+    setError(null);
     try {
       if (type === 'login') {
         await signInWithEmailAndPassword(auth, email, password);
@@ -42,11 +46,21 @@ export default function AuthPage() {
         await createUserWithEmailAndPassword(auth, email, password);
       }
       router.push('/dashboard');
-    } catch (error: any) {
+    } catch (err: any) {
+      const authError = err as AuthError;
+      let message = "Ocorreu um erro inesperado.";
+      
+      if (authError.code === 'auth/invalid-credential') message = "E-mail ou senha incorretos.";
+      if (authError.code === 'auth/email-already-in-use') message = "Este e-mail já está em uso.";
+      if (authError.code === 'auth/weak-password') message = "A senha deve ter pelo menos 6 caracteres.";
+      if (authError.code === 'auth/invalid-email') message = "E-mail inválido.";
+      if (authError.code === 'auth/configuration-not-found') message = "O método de login não foi ativado no Console do Firebase.";
+
+      setError(message);
       toast({
         variant: "destructive",
         title: "Erro na autenticação",
-        description: error.message || "Verifique suas credenciais.",
+        description: message,
       });
     } finally {
       setIsLoading(false);
@@ -55,16 +69,21 @@ export default function AuthPage() {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
+    setError(null);
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
       router.push('/dashboard');
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro com Google",
-        description: error.message,
-      });
+    } catch (err: any) {
+      const authError = err as AuthError;
+      if (authError.code !== 'auth/popup-closed-by-user') {
+        setError(authError.message);
+        toast({
+          variant: "destructive",
+          title: "Erro com Google",
+          description: authError.message,
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -102,6 +121,13 @@ export default function AuthPage() {
           
           <TabsContent value="login">
             <CardContent className="space-y-4 pt-4">
+              {error && (
+                <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Erro</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email">E-mail</Label>
                 <Input 
@@ -135,6 +161,13 @@ export default function AuthPage() {
 
           <TabsContent value="signup">
             <CardContent className="space-y-4 pt-4">
+              {error && (
+                <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Erro</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="new-email">E-mail</Label>
                 <Input 
