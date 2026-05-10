@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A Genkit flow for parsing raw financial statements or files to identify and categorize investment transactions.
@@ -10,8 +9,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-
-export const maxDuration = 60; // Aumenta o tempo limite para 60 segundos
 
 const AITransactionImporterInputSchema = z.object({
   rawStatement: z.string().optional().describe('Raw financial statement text, which can be a CSV snippet or unstructured text.'),
