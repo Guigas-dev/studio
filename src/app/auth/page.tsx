@@ -35,7 +35,7 @@ export default function AuthPage() {
     }
   }, [user, authLoading, router]);
 
-  // Interface de ajuda caso o Firebase não esteja configurado
+  // Se auth for null, significa que a configuração do Firebase falhou ou está ausente
   if (!auth && !authLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4 relative">
@@ -50,28 +50,28 @@ export default function AuthPage() {
 
         <Card className="w-full max-w-md border-primary/20 bg-card/50 backdrop-blur-xl">
           <CardHeader className="text-center">
-            <Settings className="w-12 h-12 text-primary mx-auto mb-4 animate-spin-slow" />
-            <CardTitle className="font-headline text-2xl">Configuração Necessária</CardTitle>
+            <Settings className="w-12 h-12 text-primary mx-auto mb-4 animate-bounce" />
+            <CardTitle className="font-headline text-2xl">Conexão Pendente</CardTitle>
             <CardDescription>
-              Para ativar o sistema de investimentos, conecte seu projeto Firebase.
+              A plataforma está pronta, mas precisa das suas chaves do Firebase para funcionar.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert className="bg-primary/5 border-primary/20 text-primary">
               <ShieldCheck className="h-4 w-4" />
-              <AlertTitle>Próximo Passo</AlertTitle>
+              <AlertTitle>Configuração Necessária</AlertTitle>
               <AlertDescription className="text-xs">
-                Insira suas credenciais no arquivo <code className="bg-primary/10 px-1 rounded">.env</code> ou em <code className="bg-primary/10 px-1 rounded">src/firebase/config.ts</code>.
+                Adicione suas credenciais no arquivo <code className="bg-primary/10 px-1 rounded">.env</code> ou diretamente em <code className="bg-primary/10 px-1 rounded">src/firebase/config.ts</code>.
               </AlertDescription>
             </Alert>
-            <div className="bg-secondary/30 p-4 rounded-lg space-y-2 font-mono text-[10px] text-muted-foreground">
+            <div className="bg-secondary/30 p-4 rounded-lg space-y-2 font-mono text-[10px] text-muted-foreground border border-border/50">
               <p>NEXT_PUBLIC_FIREBASE_API_KEY=AIza...</p>
               <p>NEXT_PUBLIC_FIREBASE_PROJECT_ID=deltawealth-...</p>
             </div>
           </CardContent>
           <CardFooter>
             <Button variant="outline" className="w-full border-primary/30 hover:bg-primary/5" onClick={() => window.location.reload()}>
-              Já configurei, atualizar agora
+              Já configurei, atualizar página
             </Button>
           </CardFooter>
         </Card>
@@ -124,7 +124,7 @@ export default function AuthPage() {
       let message = authError.message;
 
       if (authError.code === 'auth/popup-blocked') {
-        message = "O popup foi bloqueado pelo seu navegador. Por favor, habilite popups ou use o login por e-mail.";
+        message = "O popup foi bloqueado. Por favor, habilite popups ou use o login por e-mail.";
       } else if (authError.code === 'auth/operation-not-allowed') {
         message = "O login via Google não está ativado no Console do Firebase.";
       }
@@ -165,7 +165,7 @@ export default function AuthPage() {
       <Card className="w-full max-w-md border-border/50 bg-card/50 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-700">
         <Tabs defaultValue="login" className="w-full">
           <CardHeader>
-            <TabsList className="grid w-full grid-cols-2 bg-secondary/50">
+            <TabsList className="grid w-full grid-cols-2 bg-secondary/50 p-1">
               <TabsTrigger value="login">Entrar</TabsTrigger>
               <TabsTrigger value="signup">Criar Conta</TabsTrigger>
             </TabsList>

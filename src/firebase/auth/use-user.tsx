@@ -6,6 +6,7 @@ import { useAuth } from '../provider';
 
 /**
  * Hook para acessar o usuário autenticado atual.
+ * Corrigido para evitar loops de carregamento infinito quando o Firebase não está configurado.
  */
 export function useUser() {
   const auth = useAuth();
@@ -13,7 +14,12 @@ export function useUser() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!auth) return;
+    // Se não houver instância de auth (configuração faltando), 
+    // encerramos o estado de carregamento imediatamente.
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
