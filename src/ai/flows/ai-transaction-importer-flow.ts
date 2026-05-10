@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A Genkit flow for parsing raw financial statements or files to identify and categorize investment transactions.
@@ -21,7 +20,7 @@ const TransactionTypeSchema = z.enum(['buy', 'sell', 'dividend', 'other']).descr
 
 const AITransactionSchema = z.object({
   type: TransactionTypeSchema,
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format.').describe('The date of the transaction in YYYY-MM-DD format.'),
+  date: z.string().describe('The date of the transaction in YYYY-MM-DD format.'),
   ticker: z.string().optional().nullable().describe('The ticker symbol of the asset involved in the transaction (e.g., "PETR4", "IVVB11"). Use null if not inferable.'),
   description: z.string().describe('A brief description of the transaction.'),
   quantity: z.number().optional().nullable().describe('The quantity of the asset involved for buy/sell transactions.'),
@@ -42,41 +41,35 @@ const transactionImporterPrompt = ai.definePrompt({
   name: 'aiTransactionImporterPrompt',
   input: { schema: AITransactionImporterInputSchema },
   output: { schema: AITransactionImporterOutputSchema },
-  prompt: `You are an expert financial data analyst specializing in the Brazilian stock market (B3). Your task is to extract investment transactions from the provided raw data.
+  prompt: `Você é um analista de dados financeiros experiente no mercado brasileiro (B3). Sua missão é encontrar transações de investimento nos dados fornecidos.
 
-Data Source:
+FONTE DE DADOS:
 {{#if rawStatement}}
-Raw Data (Text/CSV): 
+Dados brutos (Texto/CSV): 
 """
 {{{rawStatement}}}
 """
 {{/if}}
 {{#if fileDataUri}}
-Attached File (PDF/Image): {{media url=fileDataUri}}
+Arquivo Anexo (PDF/Imagem): {{media url=fileDataUri}}
 {{/if}}
 
-INSTRUCTIONS:
-1. **Analyze with Flexibility**: Identify rows that represent financial movements. The columns might not have standard names (e.g., 'Ativo', 'Papel', 'Símbolo' are all 'ticker').
-2. **Transaction Types**: 
-   - 'buy' (Compra, C, Aquisição)
-   - 'sell' (Venda, V, Alienação)
-   - 'dividend' (Proventos, Dividendos, JCP, Rendimento, Rendimentos, Juros s/ Capital Próprio)
-3. **Data Cleaning**:
-   - Dates: Convert to YYYY-MM-DD. Handle formats like DD/MM/YYYY or DD/MM/YY.
-   - Numbers: Convert to pure numbers. Brazilian data often uses ',' for decimals (e.g., '10,50' -> 10.5). Remove 'R$', dots used as thousand separators, and whitespace.
-   - Tickers: Clean them (e.g., 'PETR4 - PETROBRAS' -> 'PETR4'). If missing but the name is clear, infer the B3 ticker.
-4. **Output Requirements**: 
-   - Return a VALID JSON array of objects.
-   - If a row is clearly NOT a transaction (header, footer, total sum), ignore it.
-   - For 'dividend' types, quantity and price can be null, but 'amount' is mandatory.
+INSTRUÇÕES DE EXTRAÇÃO:
+1. **Analise cada linha**: Identifique movimentações de COMPRA, VENDA ou PROVENTOS (Dividendos, JCP, Rendimentos).
+2. **Mapeamento de Tickers**: 
+   - Identifique tickers como PETR4, VALE3, HGLG11, IVVB11, BTC, ETH.
+   - Se o ticker não estiver explícito, mas o nome da empresa for claro (ex: "ITAU UNIBANCO"), infira o ticker (ITUB4).
+3. **Limpeza e Conversão**:
+   - Datas: Converta formatos como 15/05/2024 ou 15/05/24 para 2024-05-15 (YYYY-MM-DD).
+   - Números: Remova "R$", pontos de milhar e use ponto para decimais (ex: "1.250,50" vira 1250.50).
+4. **Tratamento de Proventos**:
+   - Se o tipo for 'dividend', a quantidade e preço podem ser nulos, mas o 'amount' é o valor recebido.
 
-5. **Categorization**: 
-   - If the ticker ends in 3, 4, 5, 6 -> 'Ações'
-   - If ends in 11 and is property/logistics -> 'FIIs'
-   - If ends in 11 and is index tracker -> 'ETFs'
-   - If ends in 31, 32, 33, 34, 35 -> 'BDRs'
+EXEMPLO DE IDENTIFICAÇÃO:
+- "10/05/2024;Compra;PETR4;100;35,00;3500,00" -> { type: 'buy', ticker: 'PETR4', quantity: 100, price: 35.0, amount: 3500.0 }
+- "12/05/2024;Rendimento;HGLG11;0,78;78,00" -> { type: 'dividend', ticker: 'HGLG11', amount: 78.0 }
 
-Be precise and exhaustive. Extract all transactions found.`
+Seja exaustivo. Extraia TODAS as transações que encontrar. Se a linha for apenas um cabeçalho ou saldo, ignore-a.`
 });
 
 const aiTransactionImporterFlow = ai.defineFlow(
