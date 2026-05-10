@@ -5,7 +5,7 @@ import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Wand2, Loader2, CheckCircle2, AlertCircle, FileUp, FileSpreadsheet, X, FileText } from "lucide-react";
+import { Wand2, Loader2, CheckCircle2, FileUp, FileSpreadsheet, X, FileText, FileSearch } from "lucide-react";
 import { aiTransactionImporter } from "@/ai/flows/ai-transaction-importer-flow";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore } from "@/firebase";
@@ -28,12 +28,13 @@ export function B3ImportDialog() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv')) {
+    // Caso seja planilha ou CSV
+    if (file.name.match(/\.(xlsx|xls|csv)$/i)) {
       const reader = new FileReader();
       reader.onload = async (event) => {
         try {
           const XLSX = await import('xlsx');
-          const data = event.target?.result;
+          const data = new Uint8Array(event.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
@@ -43,14 +44,15 @@ export function B3ImportDialog() {
           setFileData({ name: file.name, isSpreadsheet: true });
           
           toast({
-            title: "Planilha carregada",
-            description: "Os dados foram extraídos e estão prontos para análise.",
+            title: "Planilha processada",
+            description: "Dados extraídos com sucesso. Você pode revisá-los na caixa de texto.",
           });
         } catch (err) {
+          console.error("Erro XLSX:", err);
           toast({
             variant: "destructive",
             title: "Erro ao ler planilha",
-            description: "Não foi possível processar o arquivo Excel.",
+            description: "Certifique-se que o arquivo não está protegido por senha.",
           });
         }
       };
@@ -58,25 +60,26 @@ export function B3ImportDialog() {
       return;
     }
 
+    // Caso seja PDF ou Imagem
     if (file.size > 3.5 * 1024 * 1024) {
       toast({
         variant: "destructive",
         title: "Arquivo muito grande",
-        description: "O tamanho máximo permitido é 3.5MB.",
+        description: "O limite para documentos é 3.5MB.",
       });
       return;
     }
 
     const reader = new FileReader();
-    reader.onloadend = () => {
+    reader.onload = () => {
       setFileData({
         name: file.name,
         uri: reader.result as string,
         isSpreadsheet: false
       });
       toast({
-        title: "Arquivo selecionado",
-        description: `${file.name} pronto para processamento.`,
+        title: "Documento anexado",
+        description: `${file.name} pronto para análise visual da IA.`,
       });
     };
     reader.readAsDataURL(file);
@@ -84,8 +87,8 @@ export function B3ImportDialog() {
 
   const removeFile = () => {
     setFileData(null);
+    setText("");
     if (fileInputRef.current) fileInputRef.current.value = "";
-    if (fileData?.isSpreadsheet) setText("");
   };
 
   async function handleImport() {
@@ -100,11 +103,13 @@ export function B3ImportDialog() {
       
       if (transactions && transactions.length > 0) {
         for (const tx of transactions) {
+          const safeAmount = Number(tx.amount) || 0;
+          
           if (tx.type === 'dividend') {
             const divRef = collection(db, 'users', user.uid, 'dividends');
             addDoc(divRef, {
               ticker: tx.ticker || "OUTROS",
-              amount: tx.amount || 0,
+              amount: safeAmount,
               date: tx.date,
               type: 'dividend',
               description: tx.description,
@@ -121,7 +126,9 @@ export function B3ImportDialog() {
             const txRef = collection(db, 'users', user.uid, 'transactions');
             addDoc(txRef, {
               ...tx,
-              amount: tx.amount || 0,
+              amount: safeAmount,
+              quantity: Number(tx.quantity) || 0,
+              price: Number(tx.price) || 0,
               createdAt: serverTimestamp(),
             }).catch(async () => {
               errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -131,29 +138,28 @@ export function B3ImportDialog() {
               }));
             });
 
-            // Atualização do Ativo (Saldo e Preço Médio simplificado para MVP)
+            // Atualização do Ativo
             if (tx.ticker && (tx.type === 'buy' || tx.type === 'sell')) {
               const assetRef = doc(db, 'users', user.uid, 'assets', tx.ticker);
-              
               const assetSnap = await getDoc(assetRef);
+              
               let currentQty = 0;
               let currentAvgPrice = 0;
 
               if (assetSnap.exists()) {
                 const data = assetSnap.data();
-                currentQty = data.quantity || 0;
-                currentAvgPrice = data.averagePrice || 0;
+                currentQty = Number(data.quantity) || 0;
+                currentAvgPrice = Number(data.averagePrice) || 0;
               }
 
-              const txQty = tx.quantity || 0;
-              const txPrice = tx.price || (txQty > 0 ? (tx.amount / txQty) : 0);
+              const txQty = Number(tx.quantity) || 0;
+              const txPrice = Number(tx.price) || (txQty > 0 ? (safeAmount / txQty) : 0);
               
               let newQty = currentQty;
               let newAvgPrice = currentAvgPrice;
 
               if (tx.type === 'buy') {
                 newQty = currentQty + txQty;
-                // Cálculo de preço médio: (QtdAtual * PreçoMédio + QtdNova * PreçoNovo) / QtdTotal
                 if (newQty > 0) {
                   newAvgPrice = ((currentQty * currentAvgPrice) + (txQty * txPrice)) / newQty;
                 }
@@ -166,7 +172,7 @@ export function B3ImportDialog() {
                 type: tx.suggestedCategory || 'Ações',
                 quantity: newQty,
                 averagePrice: newAvgPrice,
-                currentPrice: txPrice, // Atualiza a cotação com o último preço negociado
+                currentPrice: txPrice || currentAvgPrice,
                 lastUpdate: serverTimestamp(),
               }, { merge: true }).catch(async () => {
                  errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -181,7 +187,7 @@ export function B3ImportDialog() {
 
         toast({
           title: "Importação concluída!",
-          description: `Identificamos e salvamos ${transactions.length} novos registros.`,
+          description: `Processamos ${transactions.length} registros com sucesso.`,
         });
         setIsOpen(false);
         setText("");
@@ -189,15 +195,15 @@ export function B3ImportDialog() {
       } else {
         toast({
           variant: "destructive",
-          title: "Nenhuma transação encontrada",
-          description: "A IA não conseguiu identificar transações no conteúdo fornecido.",
+          title: "Nenhum dado extraído",
+          description: "A IA não identificou transações claras. Tente um trecho menor ou outro arquivo.",
         });
       }
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Erro na importação",
-        description: "Não foi possível processar os dados. Tente copiar e colar apenas o texto relevante.",
+        title: "Erro no processamento",
+        description: "Não conseguimos analisar os dados agora. Verifique sua conexão.",
       });
     } finally {
       setIsLoading(false);
@@ -214,24 +220,29 @@ export function B3ImportDialog() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] bg-card border-border">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-headline font-bold">Extração por IA</DialogTitle>
+          <DialogTitle className="text-2xl font-headline font-bold">Importação com IA</DialogTitle>
           <DialogDescription>
-            Suporte para **PDF, Imagens e Planilhas (XLSX)**. A IA analisará automaticamente as movimentações.
+            Envie sua **planilha de ativos, PDF da corretora ou apenas cole o texto** abaixo.
           </DialogDescription>
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Texto Extraído / Bruto:</label>
+              {text && (
+                <Button variant="ghost" size="sm" onClick={() => setText("")} className="h-6 text-[10px] text-destructive">Limpar Texto</Button>
+              )}
+            </div>
             <Textarea 
-              placeholder="Cole o texto do extrato aqui ou suba um arquivo abaixo..."
-              className="min-h-[120px] bg-secondary/30 border-border focus:border-primary/50 resize-none p-4 text-xs font-mono"
+              placeholder="Cole aqui o texto do seu extrato ou arraste um arquivo..."
+              className="min-h-[150px] bg-secondary/30 border-border focus:border-primary/50 resize-none p-4 text-[11px] font-mono leading-relaxed"
               value={text}
               onChange={(e) => setText(e.target.value)}
             />
           </div>
 
           <div className="flex flex-col gap-3">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Anexar Documento ou Planilha:</p>
             <input 
               type="file" 
               className="hidden" 
@@ -243,23 +254,23 @@ export function B3ImportDialog() {
             {!fileData ? (
               <Button 
                 variant="outline" 
-                className="w-full border-dashed border-2 h-24 flex flex-col gap-1 hover:bg-secondary/50 border-primary/20"
+                className="w-full border-dashed border-2 h-20 flex flex-col gap-1 hover:bg-secondary/50 border-primary/20 transition-all"
                 onClick={() => fileInputRef.current?.click()}
               >
-                <FileUp className="w-6 h-6 text-primary mb-1" />
-                <span className="text-sm font-medium">Subir PDF, Foto ou Excel</span>
-                <span className="text-[10px] text-muted-foreground">O conteúdo será extraído automaticamente</span>
+                <FileUp className="w-5 h-5 text-primary mb-1" />
+                <span className="text-xs font-medium">Anexar Excel, PDF ou Foto</span>
+                <span className="text-[9px] text-muted-foreground">Analise automática de movimentações</span>
               </Button>
             ) : (
-              <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20 animate-in fade-in slide-in-from-top-1">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-primary/20 rounded-md">
                     {fileData.isSpreadsheet ? <FileSpreadsheet className="w-5 h-5 text-primary" /> : <FileText className="w-5 h-5 text-primary" />}
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold truncate max-w-[200px]">{fileData.name}</span>
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
-                      {fileData.isSpreadsheet ? "Planilha Processada" : "Documento Pronto"}
+                    <span className="text-xs font-bold truncate max-w-[250px]">{fileData.name}</span>
+                    <span className="text-[10px] text-primary/80 font-bold tracking-tight uppercase">
+                      {fileData.isSpreadsheet ? "Dados de Planilha Carregados" : "Documento Pronto"}
                     </span>
                   </div>
                 </div>
@@ -271,24 +282,24 @@ export function B3ImportDialog() {
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => setIsOpen(false)} disabled={isLoading}>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="ghost" onClick={() => setIsOpen(false)} disabled={isLoading} className="text-xs">
             Cancelar
           </Button>
           <Button 
             onClick={handleImport} 
             disabled={isLoading || (!text.trim() && !fileData) || !user}
-            className="premium-gradient border-none min-w-[140px] shadow-lg shadow-primary/20"
+            className="premium-gradient border-none min-w-[160px] shadow-lg shadow-primary/20"
           >
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Analisando...
+                IA Analisando...
               </>
             ) : (
               <>
-                <CheckCircle2 className="w-4 h-4 mr-2" />
-                Processar com IA
+                <FileSearch className="w-4 h-4 mr-2" />
+                Iniciar Análise
               </>
             )}
           </Button>
